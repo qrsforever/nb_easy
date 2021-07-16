@@ -80,7 +80,7 @@ def _widget_add_child(widget, wdgs):
         widget.children = list(widget.children) + [child]
     return widget
 
-def k12widget(method):
+def observe_widget(method):
     def _widget(self, *args, **kwargs):
         wdg, cb = method(self, *args, **kwargs)
         if self.border:
@@ -99,7 +99,7 @@ def k12widget(method):
     return _widget
 
 
-class K12WidgetGenerator():
+class WidgetGenerator():
     def __init__(self, lan = 'en', debug=False, events=None):
         self.page = Box()
         self.out = Output(layout={'border': '1px solid black', 'width': '100%', 'height':'auto'})
@@ -227,7 +227,7 @@ class K12WidgetGenerator():
             elif self.output_type == 'jsons':
                 pprint.pprint(self.get_all_json())
 
-    @k12widget
+    @observe_widget
     def Debug(self, description, options):
         label = Label(value=description, layout=self.label_layout)
         wdg = ToggleButtons(
@@ -256,7 +256,7 @@ class K12WidgetGenerator():
                 if widget.id in self.wid_value_map.keys():
                     del self.wid_value_map[widget.id]
 
-    @k12widget
+    @observe_widget
     def Bool(self, wid, *args, **kwargs):
         wdg = Checkbox(*args, **kwargs)
         self._wid_map(wid, wdg)
@@ -266,7 +266,7 @@ class K12WidgetGenerator():
 
         return wdg, _value_change
 
-    @k12widget
+    @observe_widget
     def Int(self, wid, *args, **kwargs):
         wdg = BoundedIntText(*args, **kwargs)
         self._wid_map(wid, wdg)
@@ -276,7 +276,7 @@ class K12WidgetGenerator():
 
         return wdg, _value_change
 
-    @k12widget
+    @observe_widget
     def Float(self, wid, *args, **kwargs):
         wdg = BoundedFloatText(*args, **kwargs)
         self._wid_map(wid, wdg)
@@ -285,7 +285,7 @@ class K12WidgetGenerator():
             pass
         return wdg, _value_change
 
-    @k12widget
+    @observe_widget
     def String(self, wid, *args, **kwargs):
         wdg = Text(*args, **kwargs)
         self._wid_map(wid, wdg)
@@ -294,7 +294,7 @@ class K12WidgetGenerator():
             pass
         return wdg, _value_change
 
-    @k12widget
+    @observe_widget
     def Text(self, wid, *args, **kwargs):
         wdg = Textarea(*args, **kwargs)
         self._wid_map(wid, wdg)
@@ -303,7 +303,7 @@ class K12WidgetGenerator():
             pass
         return wdg, _value_change
 
-    @k12widget
+    @observe_widget
     def Array(self, wid, *args, **kwargs):
         wdg = Text(*args, **kwargs)
         self._wid_map(wid, wdg)
@@ -315,7 +315,7 @@ class K12WidgetGenerator():
             self.wid_value_map[wdg.id] = wdg.switch_value(val)
         return wdg, _value_change
 
-    @k12widget
+    @observe_widget
     def StringEnum(self, wid, *args, **kwargs):
         wdg = Dropdown(*args, **kwargs)
         self._wid_map(wid, wdg)
@@ -324,7 +324,7 @@ class K12WidgetGenerator():
             pass
         return wdg, _value_change
 
-    @k12widget
+    @observe_widget
     def BoolTrigger(self, wid, *args, **kwargs):
         wdg = Checkbox(*args, **kwargs)
         self._wid_map(wid, wdg)
@@ -352,7 +352,7 @@ class K12WidgetGenerator():
         _update_layout(wdg, wdg.value)
         return wdg, _value_change
 
-    @k12widget
+    @observe_widget
     def StringEnumTrigger(self, wid, *args, **kwargs):
         wdg = Dropdown(*args, **kwargs)
         self._wid_map(wid, wdg)
@@ -679,7 +679,7 @@ class K12WidgetGenerator():
             return _schema_tooltips(self.wid_widget_map)
 
 
-def erlangai_schema_parse(config, lan='en', debug=True):
+def nbeasy_schema_parse(config, lan='en', debug=True):
     g = WidgetGenerator(lan, debug=debug)
     g.parse_schema(config)
     display(g.page)
