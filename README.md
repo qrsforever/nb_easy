@@ -1,2 +1,7 @@
 # nb_easy
-Utils codes used by notebook
+
+Jupyter工具库
+
+## easy_widget
+
+通过json的配置的schema, 轻松实现可视化参数配置
