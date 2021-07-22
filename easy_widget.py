@@ -104,14 +104,14 @@ class BytesText(widgets.Text):
 
 
 class WidgetGenerator():
-    def __init__(self, lan = 'en', debug=False, events=None):
+    def __init__(self, lan = 'en', debug=False, events=None, border=False):
         self.page = widgets.Box()
         self.out = widgets.Output(layout={'border': '1px solid black', 'width': '100%', 'height':'auto'})
         self.output_type = 'none'
         self.lan = lan
         self.tag = 'tag'
         self.debug = debug
-        self.border = False
+        self.border = border
         self.events = events
         self.dataset_dir = ''
         self.dataset_url = ''
@@ -406,19 +406,26 @@ class WidgetGenerator():
             _name = {'en': _name, 'cn': _name}
 
         tlo = widgets.Layout()
-        width = config.get('width', -1)
-        height = config.get('height', -1)
-        if width > 0:
-            tlo.width = '%dpx' % width
-        else:
-            tlo.max_width = '280px'
-        if height > 0:
-            tlo.height = '%dpx' % height
+        flex = config.get('flex', '0 1 auto')
+        width = config.get('width', None)
+        height = config.get('height', None)
+        if width:
+            if isinstance(width, int):
+                tlo.width = '%dpx' % width
+            else:
+                tlo.width = width
+        if height:
+            if isinstance(height, int):
+                tlo.height = '%dpx' % height
+            else:
+                tlo.height = height
 
+        tstyle = {}
         description_width = config.get('description_width', 130)
-        tstyle = {
-            'description_width': '%dpx' % description_width, # 45% or 'initial'
-        }
+        if isinstance(description_width, str):
+            tstyle['description_width'] = description_width # 45% or 'initial'
+        else:
+            tstyle['description_width'] = '%dpx' % description_width
 
         args = {}
         readonly = config.get('readonly', False)
@@ -452,6 +459,15 @@ class WidgetGenerator():
             format = config.get('format', None)
             if format:
                 args['format'] = format
+        elif _type in ['H', 'V']:
+            tlo.align_items = config.get('align_items', 'stretch')
+            tlo.justify_content = config.get('justify_content', 'flex-start')
+            tlo.align_content = config.get('align_content', 'flex-start')
+            tlo.margin = config.get('margin', '3px 0px 3px 0px')
+            if not width:
+                tlo.width = '100%'
+            if self.border:
+                tlo.border = '1px solid cyan'
 
         if _type == 'page':
             wdg = widgets.VBox(layout=widgets.Layout(
@@ -465,7 +481,7 @@ class WidgetGenerator():
             # wdg.titles = [obj['name'][self.lan] for obj in _objs]
             for i, obj in enumerate(_objs):
                 wdg.set_title(i, obj['name'] if isinstance(obj['name'], str) else obj['name'][self.lan])
-                box = widgets.VBox(layout = self.vlo)
+                box = widgets.VBox(layout = tlo)
                 for obj in obj['objs']:
                     self._parse_config(box, obj)
                 _widget_add_child(wdg, box)
@@ -477,7 +493,7 @@ class WidgetGenerator():
             # wdg.titles = [obj['name'][self.lan] for obj in _objs]
             for i, obj in enumerate(_objs):
                 wdg.set_title(i, obj['name'] if isinstance(obj['name'], str) else obj['name'][self.lan])
-                box = widgets.VBox(layout = self.vlo)
+                box = widgets.VBox(layout = tlo)
                 for obj in obj['objs']:
                     self._parse_config(box, obj)
                 _widget_add_child(wdg, box)
@@ -501,7 +517,7 @@ class WidgetGenerator():
             options = []
             for i, obj in enumerate(_objs):
                 options.append((obj['name'] if isinstance(obj['name'], str) else obj['name'][self.lan], i))
-                box = widgets.VBox(layout = self.vlo)
+                box = widgets.VBox(layout = tlo)
                 self._parse_config(box, obj)
                 wdg.boxes.append(box)
             wdg.children = [widgets.HBox([label, btns]), wdg.boxes[0]]
@@ -529,7 +545,9 @@ class WidgetGenerator():
             if _name:
                 wdg = widgets.HTML(value = f"<b><font color='black'>{_name[self.lan]} :</b>")
                 _widget_add_child(widget, wdg)
-            wdg = widgets.HBox(layout = self.hlo)
+            # layout.display = 'flex'
+            # layout.flex_flow = 'row'
+            wdg = widgets.HBox(layout=tlo)
             for obj in _objs:
                 self._parse_config(wdg, obj)
             return _widget_add_child(widget, wdg)
@@ -538,7 +556,9 @@ class WidgetGenerator():
             if _name:
                 wdg = widgets.HTML(value = f"<b><font color='black'>{_name[self.lan]} :</b>")
                 _widget_add_child(widget, wdg)
-            wdg = widgets.VBox(layout = self.vlo)
+            # layout.display = 'flex'
+            # layout.flex_flow = 'column'
+            wdg = widgets.VBox(layout=tlo)
             for obj in _objs:
                 self._parse_config(wdg, obj)
             return _widget_add_child(widget, wdg)
@@ -625,6 +645,7 @@ class WidgetGenerator():
         elif _type == 'video':
             wdg = self.Video(
                     __id_,
+                    layout = tlo,
                     **args,)
             return _widget_add_child(widget, wdg)
 
@@ -687,7 +708,6 @@ class WidgetGenerator():
 
         elif _type == 'button':
             style = config.get('style', 'success')
-            handler = config.get('handler', None)
             wdg = widgets.Button(
                     description=_name[self.lan],
                     disabled=False,
@@ -695,21 +715,18 @@ class WidgetGenerator():
                     layout=tlo)
             self._wid_map(__id_, wdg)
             wdg.context = self
-            if self.events and handler:
-                wdg.on_click(self.events[handler])
             return _widget_add_child(widget, wdg)
 
         elif _type == 'progressbar':
             style = config.get('style', 'success')
             wdg = widgets.FloatProgress(
-                    value=0.0, 
+                    value=0.0,
                     description=_name[self.lan],
                     bar_style=style,
                     layout=tlo,
                     **args)
             self._wid_map(__id_, wdg)
             return _widget_add_child(widget, wdg)
-
 
         elif _type == 'iframe':
             return
@@ -721,13 +738,13 @@ class WidgetGenerator():
             for obj in _objs:
                 source_id, source_trait =  obj['source']
                 target_id, target_trait =  obj['target']
-                widgets.jslink((self.wid_widget_map[source_id], source_trait), (self.wid_widget_map[target_id], target_trait))
+                widgets.jslink((self.get_widget_byid(source_id), source_trait), (self.get_widget_byid(target_id), target_trait))
 
         elif _type == 'jsdlink':
             for obj in _objs:
                 source_id, source_trait =  obj['source']
                 target_id, target_trait =  obj['target']
-                widgets.jsdlink((self.wid_widget_map[source_id], source_trait), (self.wid_widget_map[target_id], target_trait))
+                widgets.jsdlink((self.get_widget_byid(source_id), source_trait), (self.get_widget_byid(target_id), target_trait))
 
         elif _type == 'interactive':
             if self.events:
@@ -737,8 +754,33 @@ class WidgetGenerator():
                     if handler not in self.events:
                         continue
                     handler = self.events[handler]
-                    params = {key: self.wid_widget_map[val] for key, val in params.items()}
+                    params = {key: self.get_widget_byid(val) for key, val in params.items()}
                     widgets.interactive(handler, **params)
+
+        elif _type == 'observe':
+            if self.events:
+                for obj in _objs:
+                    handler = obj['handler']
+                    params  = obj['params']
+                    if handler not in self.events:
+                        continue
+                    handler = self.events[handler]
+                    source_wdg = self.get_widget_byid(params['source'])
+                    target_wdg = self.get_widget_byid(params['target'])
+                    source_wdg.observe(lambda change, H=handler, T=target_wdg: H(
+                        change['owner'], change['old'], change['new'], T), 'value')
+
+        elif _type == 'onclick':
+            if self.events:
+                for obj in _objs:
+                    handler = obj['handler']
+                    params  = obj['params']
+                    if handler not in self.events:
+                        continue
+                    handler = self.events[handler]
+                    source_wdg = self.get_widget_byid(params['source'])
+                    targets = [self.get_widget_byid(x) for x in params['targets']]
+                    source_wdg.on_click(lambda btn, H=handler, args=targets: H(btn, *args))
 
         else:
             for obj in _objs:
@@ -777,8 +819,8 @@ class WidgetGenerator():
             return _schema_tooltips(self.wid_widget_map)
 
 
-def nbeasy_schema_parse(config, lan='en', debug=True, events=None):
-    g = WidgetGenerator(lan, debug=debug, events=events)
+def nbeasy_schema_parse(config, lan='en', debug=True, events=None, border=False):
+    g = WidgetGenerator(lan, debug=debug, events=events, border=border)
     try:
         g.parse_schema(config)
     except Exception:
@@ -809,6 +851,8 @@ def nbeasy_widget_type(id_, type_, label, default=None, tips=None, description_w
         easy['readonly'] = True
     if description_width:
         easy['description_width'] = description_width
+    if len(label) == 0:
+        easy['description_width'] = 0
     return easy
 
 def nbeasy_widget_bool(id_, label, default=False, tips=None, description_width=None, width=None, height=None, readonly=False):
@@ -850,6 +894,8 @@ def nbeasy_widget_stringarray(id_, label, default=[], tips=None, description_wid
 
 def nbeasy_widget_stringenum(id_, label, default=0, enums=[], tips=None, description_width=None, width=None, height=None, readonly=False):
     easy = nbeasy_widget_type(id_, 'string-enum', label, default, tips, description_width, width, height, readonly)
+    if len(enums) == 0:
+        enums = ['NONE']
     easy['objs'] = [{
             'name': x if isinstance(x, str) else x[0],
             'value': x if isinstance(x, str) else x[1]
@@ -884,9 +930,8 @@ def nbeasy_widget_booltrigger(id_, label, default=False, trigger=[], tips=None, 
     ]
     return easy
 
-def nbeasy_widget_button(id_, label, handler, style='success', tips=None, description_width=None, width=None, height=None):
+def nbeasy_widget_button(id_, label, style='success', tips=None, description_width=None, width=None, height=None):
     easy = nbeasy_widget_type(id_, 'button', label, tips, description_width, width, height)
-    easy['handler'] = handler
     easy['style'] = style # ['primary', 'success', 'info', 'warning', 'danger', '']
     return easy
 
