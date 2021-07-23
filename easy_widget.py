@@ -911,23 +911,35 @@ def nbeasy_widget_video(id_, label, default='', format='url', tips=None, descrip
     easy['format'] = format
     return easy
 
-def nbeasy_widget_booltrigger(id_, label, default=False, trigger=[], tips=None, description_width=None, width=None, height=None, readonly=False):
+def nbeasy_widget_booltrigger(id_, label, default=False, triggers=[], tips=None, description_width=None, width=None, height=None, readonly=False):
     easy = nbeasy_widget_type(id_, 'bool-trigger', label, default, tips, description_width, width, height, readonly)
+    assert len(triggers) == 2, 'bool triggers number is must 2'
     easy['objs'] = [
         {
             'name': 'Enable',
             'value': True,
-            'trigger': {
-                'type': '_ignore_',
-                'objs': trigger,
-            } if isinstance(trigger, list) else trigger
+            'trigger': triggers[1] 
         },
         {
             'name': 'Disable',
             'value': False,
-            'trigger': {}
+            'trigger': triggers[0]
         }
     ]
+    return easy
+
+def nbeasy_widget_stringenumtrigger(id_, label, default=0, enums=[], triggers=[], tips=None, description_width=None, width=None, height=None, readonly=False):
+    easy = nbeasy_widget_type(id_, 'string-enum-trigger', label, default, tips, description_width, width, height, readonly)
+    if len(enums) == 0:
+        enums = ['NONE']
+    easy['objs'] = [{
+            'name': x if isinstance(x, str) else x[0],
+            'value': x if isinstance(x, str) else x[1]
+        } for x in enums]
+    easy['default'] = enums[default] if isinstance(enums[default], str) else enums[default][1]
+    for i, trigger in enumerate(triggers):
+        assert isinstance(trigger, dict), 'stringnum trigger must be dict type'
+        easy['objs'][i]['trigger'] = trigger
     return easy
 
 def nbeasy_widget_button(id_, label, style='success', tips=None, description_width=None, width=None, height=None):
