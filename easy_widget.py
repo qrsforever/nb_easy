@@ -509,7 +509,7 @@ class WidgetGenerator():
                 trigger_box = parent_box.boxes[val]
                 parent_box.children = [parent_box.children[0], trigger_box]
 
-            label = widgets.Label(value= _name[self.lan] if _name else 'TODO', layout=self.label_layout)
+            label = widgets.Label(value= _name[self.lan] if _name else ' ', layout=self.label_layout)
             btns = widgets.ToggleButtons()
             wdg = widgets.VBox(layout = self.nav_layout)
             wdg.node_type = 'navigation'
