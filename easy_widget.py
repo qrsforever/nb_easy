@@ -236,10 +236,11 @@ class WidgetGenerator():
                 pprint.pprint(self.get_all_json())
 
     @observe_widget
-    def Debug(self, description, options):
+    def Debug(self, description, options, index=0):
         label = widgets.Label(value=description, layout=self.label_layout)
         wdg = widgets.ToggleButtons(
                 options=options,
+                index=index,
                 # description=description,
                 disabled=False,
                 button_style='warning')
@@ -248,7 +249,7 @@ class WidgetGenerator():
         def _value_change(change):
             self.output_type = change['new']
 
-        self.output_type = options[0][1]
+        self.output_type = options[index][1]
         return wdg, _value_change
 
     def _wid_map(self, wid, widget):
@@ -391,6 +392,11 @@ class WidgetGenerator():
         _update_layout(wdg, wdg.value, None)
         return wdg, _value_change
 
+    def Image(self, wid, *args, **kwargs):
+        wdg = widgets.Image(*args, **kwargs)
+        self._wid_map(wid, wdg)
+        return wdg
+
     def Video(self, wid, *args, **kwargs):
         wdg = widgets.Video(loop=False, autoplay=False, *args, **kwargs)
         self._wid_map(wid, wdg)
@@ -452,9 +458,9 @@ class WidgetGenerator():
             else:
                 args['max'] = 2147483647
         elif _type in ['image', 'audio', 'video']:
-            if width > 0:
+            if width:
                 args['width'] = width
-            if height > 0:
+            if height:
                 args['height'] = height
             format = config.get('format', None)
             if format:
@@ -530,7 +536,8 @@ class WidgetGenerator():
             options = []
             for obj in _objs:
                 options.append((obj['name'], obj['value']))
-            wdg = self.Debug(_name[self.lan], options)
+            index = config.get('index', 0)
+            wdg = self.Debug(_name[self.lan], options, index)
             return _widget_add_child(widget, [wdg, self.out])
 
         elif _type == 'object':
@@ -629,17 +636,10 @@ class WidgetGenerator():
             return _widget_add_child(widget, wdg)
 
         elif _type == 'image':
-            value = config.get('default', None)
-            width = config.get('width', '100')
-            height = config.get('height', '100')
-            if not value:
-                raise RuntimeError('not set value')
-            image_file = f'/data{value}'
-            if not os.path.exists(image_file):
-                return widget
-            with open(image_file, 'rb') as fp:
-                wdg = widgets.Image(value=fp.read(), width=width, height=height)
-            # wdg = widgets.HTML(value=f'<img src={self.dataset_url}{value} title="{_name[self.lan]}" width={width} height={height}>')
+            wdg = self.Image(
+                    __id_,
+                    layout = tlo,
+                    **args,)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'video':
@@ -803,6 +803,7 @@ class WidgetGenerator():
                 config['objs'].append({
                     'type': 'output',
                     'name': {'cn': '调试: ', 'en': 'Debug: '},
+                    'index': 4,
                     'objs': [
                         {'name': 'Print', 'value': 'print'},
                         {'name': 'Key-Value(changed)', 'value': 'kv'},
@@ -903,8 +904,10 @@ def nbeasy_widget_stringenum(id_, label, default=0, enums=[], tips=None, descrip
     easy['default'] = enums[default] if isinstance(enums[default], str) else enums[default][1]
     return easy
 
-def nbeasy_widget_image(id_, label, default='', tips=None, description_width=None, width=None, height=None):
-    return nbeasy_widget_type(id_, 'image', label, default, tips, width, height, readonly=False)
+def nbeasy_widget_image(id_, label, default='', format='png', tips=None, description_width=None, width=None, height=None):
+    easy = nbeasy_widget_type(id_, 'image', label, default, tips, description_width, width, height, readonly=False)
+    easy['format'] = format
+    return easy
 
 def nbeasy_widget_video(id_, label, default='', format='url', tips=None, description_width=None, width=None, height=None):
     easy = nbeasy_widget_type(id_, 'video', label, default, tips, description_width, width, height, readonly=False)
