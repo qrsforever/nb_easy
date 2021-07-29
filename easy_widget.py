@@ -184,7 +184,18 @@ class WidgetGenerator():
             return self.wid_widget_map[wid]
         return None
 
-    def get_all_kv(self):
+    def set_widget_values(self, jconf):
+        for wid, val in jconf.items():
+            wdg = self.get_widget_byid(wid)
+            if wdg:
+                if isinstance(wdg, (widgets.Video, widgets.Image, widgets.Audio)):
+                    wdg.value = val.encode()
+                else:
+                    if isinstance(val, (list, tuple)):
+                        val = json.dumps(val)
+                    wdg.value = val
+
+    def get_all_kv(self, remove_underline=True):
         kv_map = {}
 
         def _get_kv(widget):
@@ -196,10 +207,15 @@ class WidgetGenerator():
                     for child in widget.children:
                         _get_kv(child)
             else:
-                if hasattr(widget, 'id') and widget.id[0] != '_' and hasattr(widget, 'value'):
+                if hasattr(widget, 'id') and hasattr(widget, 'value'):
+                    if remove_underline and widget.id[0] == '_':
+                        return
                     value = widget.value
                     if isinstance(value, bytes):
-                        value = value.decode()
+                        # value = value.decode()
+                        value = value.decode("utf-8","ignore")
+                        if len(value) > 2048:
+                            return
                     if hasattr(widget, 'switch_value'):
                         kv_map[widget.id] = widget.switch_value(value)
                     else:
@@ -231,7 +247,7 @@ class WidgetGenerator():
                 config = ConfigFactory.from_dict(self.wid_value_map)
                 print(HOCONConverter.convert(config, 'json'))
             elif self.output_type == 'kvs':
-                pprint.pprint(self.get_all_kv())
+                pprint.pprint(self.get_all_kv(False))
             elif self.output_type == 'jsons':
                 pprint.pprint(self.get_all_json())
 
@@ -254,6 +270,7 @@ class WidgetGenerator():
 
     def _wid_map(self, wid, widget):
         widget.id = wid
+        widget.context = self
         self.wid_widget_map[wid] = widget
 
     def _rm_sub_wid(self, widget):
@@ -714,7 +731,6 @@ class WidgetGenerator():
                     button_style=style,
                     layout=tlo)
             self._wid_map(__id_, wdg)
-            wdg.context = self
             return _widget_add_child(widget, wdg)
 
         elif _type == 'progressbar':
