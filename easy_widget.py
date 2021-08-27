@@ -110,13 +110,14 @@ class WidgetGenerator():
         self.output_type = 'none'
         self.lan = lan
         self.tag = 'tag'
+        self.defaultconfg = {}
         self.debug = debug
         self.border = border
         self.events = events
         self.dataset_dir = ''
         self.dataset_url = ''
         self.basic_types = ['int', 'float', 'bool',
-                'string', 'int-array', 'float-array',
+                'string', 'label', 'int-array', 'float-array',
                 'string-array', 'string-enum', 'image']
 
         self.vlo = widgets.Layout(
@@ -184,16 +185,29 @@ class WidgetGenerator():
             return self.wid_widget_map[wid]
         return None
 
+    def get_widget_defaultconf(self, rmlist=[]):
+        conf = self.defaultconfg.copy()
+        if len(rmlist) > 0:
+            for wid in rmlist:
+                conf.pop(wid, None)
+        return conf
+
     def set_widget_values(self, jconf):
+        update_items = {}
         for wid, val in jconf.items():
             wdg = self.get_widget_byid(wid)
             if wdg:
                 if isinstance(wdg, (widgets.Video, widgets.Image, widgets.Audio)):
-                    wdg.value = val.encode()
+                    value = val.encode()
                 else:
                     if isinstance(val, (list, tuple)):
-                        val = json.dumps(val)
-                    wdg.value = val
+                        value = json.dumps(val)
+                    else:
+                        value = val
+                if wdg.value != value:
+                    wdg.value = value
+                    update_items[wid] = wdg.value
+        return update_items
 
     def get_all_kv(self, remove_underline=True):
         kv_map = {}
@@ -208,13 +222,14 @@ class WidgetGenerator():
                         _get_kv(child)
             else:
                 if hasattr(widget, 'id') and hasattr(widget, 'value'):
+                    if widget.id[0] == '_' and widget.id[1] == '_':
+                        return
                     if remove_underline and widget.id[0] == '_':
                         return
                     value = widget.value
                     if isinstance(value, bytes):
-                        # value = value.decode()
                         value = value.decode("utf-8","ignore")
-                        if len(value) > 2048:
+                        if len(value) > 512:
                             return
                     if hasattr(widget, 'switch_value'):
                         kv_map[widget.id] = widget.switch_value(value)
@@ -228,13 +243,21 @@ class WidgetGenerator():
         config = ConfigFactory.from_dict(self.get_all_kv())
         return json.loads(HOCONConverter.convert(config, 'json'))
 
+    def logger(self, msg, clear=0):
+        with self.out:
+            if self.output_type == 'logger':
+                if clear:
+                    clear_output()
+                print(msg)
+
     def _output(self, body, clear=1):
-        if self.output_type == 'none':
+        if self.output_type not in (
+                'observe', 'kv', 'kvs', 'json', 'jsons'):
             return
         with self.out:
             if clear:
                 clear_output()
-            if self.output_type == 'print':
+            if self.output_type == 'observe':
                 if isinstance(body, Bunch):
                     pprint.pprint(body)
                 elif isinstance(body, dict):
@@ -264,6 +287,8 @@ class WidgetGenerator():
 
         def _value_change(change):
             self.output_type = change['new']
+            with self.out:
+                clear_output()
 
         self.output_type = options[index][1]
         return wdg, _value_change
@@ -314,6 +339,15 @@ class WidgetGenerator():
     @observe_widget
     def String(self, wid, *args, **kwargs):
         wdg = widgets.Text(*args, **kwargs)
+        self._wid_map(wid, wdg)
+
+        def _value_change(change):
+            pass
+        return wdg, _value_change
+
+    @observe_widget
+    def Label(self, wid, *args, **kwargs):
+        wdg = widgets.Label(*args, **kwargs)
         self._wid_map(wid, wdg)
 
         def _value_change(change):
@@ -454,7 +488,7 @@ class WidgetGenerator():
         readonly = config.get('readonly', False)
         if readonly:
             args['disabled'] = True
-        if _type in ['bool', 'int', 'float', 'string', 'text', 'string-enum',
+        if _type in ['bool', 'int', 'float', 'string', 'label', 'text', 'string-enum',
                 'bool-trigger', 'string-enum-trigger']:
             default = config.get('default', None)
             if default:
@@ -630,6 +664,17 @@ class WidgetGenerator():
             )
             return _widget_add_child(widget, wdg)
 
+        elif _type == 'label':
+            wdg = self.Label(
+                __id_,
+                description = _name[self.lan],
+                layout = tlo,
+                style = tstyle,
+                continuous_update=False,
+                **args,
+            )
+            return _widget_add_child(widget, wdg)
+
         elif _type == 'bytes':
             wdg = self.Bytes(
                 __id_,
@@ -771,7 +816,7 @@ class WidgetGenerator():
                         continue
                     handler = self.events[handler]
                     params = {key: self.get_widget_byid(val) for key, val in params.items()}
-                    widgets.interactive(handler, **params)
+                    widgets.interactive(lambda kwargs, H=handler:H(self, **kwargs), **params)
 
         elif _type == 'observe':
             if self.events:
@@ -782,9 +827,14 @@ class WidgetGenerator():
                         continue
                     handler = self.events[handler]
                     source_wdg = self.get_widget_byid(params['source'])
-                    target_wdg = self.get_widget_byid(params['target'])
-                    source_wdg.observe(lambda change, H=handler, T=target_wdg: H(
-                        change['owner'], change['old'], change['new'], T), 'value')
+                    target_wdgs = []
+                    if 'target' in params:
+                        target_wdgs.append(self.get_widget_byid(params['target']))
+                    if 'targets' in params:
+                        for wid in params['targets']:
+                            target_wdgs.append(self.get_widget_byid(wid))
+                    source_wdg.observe(lambda change, H=handler, T=target_wdgs: H(
+                        self, change['owner'], change['old'], change['new'], *T), 'value')
 
         elif _type == 'onclick':
             if self.events:
@@ -796,7 +846,7 @@ class WidgetGenerator():
                     handler = self.events[handler]
                     source_wdg = self.get_widget_byid(params['source'])
                     targets = [self.get_widget_byid(x) for x in params['targets']]
-                    source_wdg.on_click(lambda btn, H=handler, args=targets: H(btn, *args))
+                    source_wdg.on_click(lambda btn, H=handler, args=targets: H(self, btn, *args))
 
         else:
             for obj in _objs:
@@ -819,9 +869,10 @@ class WidgetGenerator():
                 config['objs'].append({
                     'type': 'output',
                     'name': {'cn': '调试: ', 'en': 'Debug: '},
-                    'index': 4,
+                    'index': 5,
                     'objs': [
-                        {'name': 'Print', 'value': 'print'},
+                        {'name': 'Logger', 'value': 'logger'},
+                        {'name': 'Observe', 'value': 'observe'},
                         {'name': 'Key-Value(changed)', 'value': 'kv'},
                         {'name': 'Json(changed)', 'value': 'json'},
                         {'name': 'Key-Value(all)', 'value': 'kvs'},
@@ -832,6 +883,7 @@ class WidgetGenerator():
         box = widgets.Box(layout=self.page_layout)
         self._parse_config(box, config)
         self.page.children = [box]
+        self.defaultconfg = self.get_all_kv(False)
         if tooltips:
             return _schema_tooltips(self.wid_widget_map)
 
@@ -894,6 +946,9 @@ def nbeasy_widget_float(id_, label, default=0.0, min_=None, max_=None, tips=None
 def nbeasy_widget_string(id_, label, default='', tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'string', label, default, tips, description_width, width, height, readonly)
 
+def nbeasy_widget_label(id_, label, default='', tips=None, description_width=None, width=None, height=None, readonly=True):
+    return nbeasy_widget_type(id_, 'label', label, default, tips, description_width, width, height, readonly)
+
 def nbeasy_widget_bytes(id_, label, default='', tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'bytes', label, default, tips, description_width, width, height, readonly)
 
@@ -937,7 +992,7 @@ def nbeasy_widget_booltrigger(id_, label, default=False, triggers=[], tips=None,
         {
             'name': 'Enable',
             'value': True,
-            'trigger': triggers[1] 
+            'trigger': triggers[1]
         },
         {
             'name': 'Disable',
