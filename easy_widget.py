@@ -770,9 +770,23 @@ class WidgetGenerator():
 
         elif _type == 'button':
             style = config.get('style', 'success')
+            icon = config.get('icon', '')
             wdg = widgets.Button(
                     description=_name[self.lan],
                     disabled=False,
+                    icon=icon,
+                    button_style=style,
+                    layout=tlo)
+            self._wid_map(__id_, wdg)
+            return _widget_add_child(widget, wdg)
+
+        elif _type == 'togglebutton':
+            style = config.get('style', 'success')
+            icon = config.get('icon', '')
+            wdg = widgets.ToggleButton(
+                    description=_name[self.lan],
+                    disabled=False,
+                    icon=icon,
                     button_style=style,
                     layout=tlo)
             self._wid_map(__id_, wdg)
@@ -1016,9 +1030,16 @@ def nbeasy_widget_stringenumtrigger(id_, label, default=0, enums=[], triggers=[]
         easy['objs'][i]['trigger'] = trigger
     return easy
 
-def nbeasy_widget_button(id_, label, style='success', tips=None, description_width=None, width=None, height=None):
+def nbeasy_widget_button(id_, label, style='success', tips=None, description_width=None, width=None, height=None, icon=''):
     easy = nbeasy_widget_type(id_, 'button', label, tips, description_width, width, height)
     easy['style'] = style # ['primary', 'success', 'info', 'warning', 'danger', '']
+    easy['icon'] = icon # https://fontawesome.com/icons
+    return easy
+
+def nbeasy_widget_togglebutton(id_, label, style='success', tips=None, description_width=None, width=None, height=None, icon=''):
+    easy = nbeasy_widget_type(id_, 'togglebutton', label, tips, description_width, width, height)
+    easy['style'] = style # ['primary', 'success', 'info', 'warning', 'danger', '']
+    easy['icon'] = icon
     return easy
 
 def nbeasy_widget_progressbar(id_, label, style='success', min_=0.0, max_=100.0, tips=None, description_width=None, width=None, height=None):
