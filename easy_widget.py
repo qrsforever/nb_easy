@@ -826,9 +826,11 @@ class WidgetGenerator():
                 for obj in _objs:
                     handler = obj['handler']
                     params  = obj['params']
-                    if handler not in self.events:
+                    if isinstance(handler, str):
+                        if handler in self.events:
+                            handler = self.events[handler]
+                    if not callable(handler):
                         continue
-                    handler = self.events[handler]
                     params = {key: self.get_widget_byid(val) for key, val in params.items()}
                     widgets.interactive(lambda kwargs, H=handler:H(self, **kwargs), **params)
 
@@ -837,9 +839,11 @@ class WidgetGenerator():
                 for obj in _objs:
                     handler = obj['handler']
                     params  = obj['params']
-                    if handler not in self.events:
+                    if isinstance(handler, str):
+                        if handler in self.events:
+                            handler = self.events[handler]
+                    if not callable(handler):
                         continue
-                    handler = self.events[handler]
                     source_wdg = self.get_widget_byid(params['source'])
                     target_wdgs = []
                     if 'target' in params:
@@ -855,9 +859,11 @@ class WidgetGenerator():
                 for obj in _objs:
                     handler = obj['handler']
                     params  = obj['params']
-                    if handler not in self.events:
+                    if isinstance(handler, str):
+                        if handler in self.events:
+                            handler = self.events[handler]
+                    if not callable(handler):
                         continue
-                    handler = self.events[handler]
                     source_wdg = self.get_widget_byid(params['source'])
                     targets = [self.get_widget_byid(x) for x in params['targets']]
                     source_wdg.on_click(lambda btn, H=handler, args=targets: H(self, btn, *args))
