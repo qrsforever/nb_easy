@@ -822,51 +822,48 @@ class WidgetGenerator():
                 widgets.jsdlink((self.get_widget_byid(source_id), source_trait), (self.get_widget_byid(target_id), target_trait))
 
         elif _type == 'interactive':
-            if self.events:
-                for obj in _objs:
-                    handler = obj['handler']
-                    params  = obj['params']
-                    if isinstance(handler, str):
-                        if handler in self.events:
-                            handler = self.events[handler]
-                    if not callable(handler):
-                        continue
-                    params = {key: self.get_widget_byid(val) for key, val in params.items()}
-                    widgets.interactive(lambda kwargs, H=handler:H(self, **kwargs), **params)
+            for obj in _objs:
+                handler = obj['handler']
+                params  = obj['params']
+                if isinstance(handler, str):
+                    if handler in self.events:
+                        handler = self.events[handler]
+                if not callable(handler):
+                    continue
+                params = {key: self.get_widget_byid(val) for key, val in params.items()}
+                widgets.interactive(lambda kwargs, H=handler:H(self, **kwargs), **params)
 
         elif _type == 'observe':
-            if self.events:
-                for obj in _objs:
-                    handler = obj['handler']
-                    params  = obj['params']
-                    if isinstance(handler, str):
-                        if handler in self.events:
-                            handler = self.events[handler]
-                    if not callable(handler):
-                        continue
-                    source_wdg = self.get_widget_byid(params['source'])
-                    target_wdgs = []
-                    if 'target' in params:
-                        target_wdgs.append(self.get_widget_byid(params['target']))
-                    if 'targets' in params:
-                        for wid in params['targets']:
-                            target_wdgs.append(self.get_widget_byid(wid))
-                    source_wdg.observe(lambda change, H=handler, T=target_wdgs: H(
-                        self, change['owner'], change['old'], change['new'], *T), 'value')
+            for obj in _objs:
+                handler = obj['handler']
+                params  = obj['params']
+                if isinstance(handler, str):
+                    if handler in self.events:
+                        handler = self.events[handler]
+                if not callable(handler):
+                    continue
+                source_wdg = self.get_widget_byid(params['source'])
+                target_wdgs = []
+                if 'target' in params:
+                    target_wdgs.append(self.get_widget_byid(params['target']))
+                if 'targets' in params:
+                    for wid in params['targets']:
+                        target_wdgs.append(self.get_widget_byid(wid))
+                source_wdg.observe(lambda change, H=handler, T=target_wdgs: H(
+                    self, change['owner'], change['old'], change['new'], *T), 'value')
 
         elif _type == 'onclick':
-            if self.events:
-                for obj in _objs:
-                    handler = obj['handler']
-                    params  = obj['params']
-                    if isinstance(handler, str):
-                        if handler in self.events:
-                            handler = self.events[handler]
-                    if not callable(handler):
-                        continue
-                    source_wdg = self.get_widget_byid(params['source'])
-                    targets = [self.get_widget_byid(x) for x in params['targets']]
-                    source_wdg.on_click(lambda btn, H=handler, args=targets: H(self, btn, *args))
+            for obj in _objs:
+                handler = obj['handler']
+                params  = obj['params']
+                if isinstance(handler, str):
+                    if handler in self.events:
+                        handler = self.events[handler]
+                if not callable(handler):
+                    continue
+                source_wdg = self.get_widget_byid(params['source'])
+                targets = [self.get_widget_byid(x) for x in params['targets']]
+                source_wdg.on_click(lambda btn, H=handler, args=targets: H(self, btn, *args))
 
         else:
             for obj in _objs:
@@ -889,7 +886,7 @@ class WidgetGenerator():
                 config['objs'].append({
                     'type': 'output',
                     'name': {'cn': '调试: ', 'en': 'Debug: '},
-                    'index': 5,
+                    'index': 0,
                     'objs': [
                         {'name': 'Logger', 'value': 'logger'},
                         {'name': 'Observe', 'value': 'observe'},
@@ -908,7 +905,7 @@ class WidgetGenerator():
             return _schema_tooltips(self.wid_widget_map)
 
 
-def nbeasy_schema_parse(config, lan='en', debug=True, events=None, border=False):
+def nbeasy_schema_parse(config, lan='en', debug=True, events=[], border=False):
     g = WidgetGenerator(lan, debug=debug, events=events, border=border)
     try:
         g.parse_schema(config)
