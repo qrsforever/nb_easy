@@ -11,7 +11,7 @@
 from IPython.display import display, clear_output
 from traitlets.utils.bunch import Bunch
 import traitlets
-import ipywidgets  as widgets
+import ipywidgets as widgets
 import base64
 import os
 import json
@@ -21,6 +21,7 @@ from pyhocon import ConfigFactory
 from pyhocon import HOCONConverter
 
 widgets.Dropdown.value.tag(sync=True)
+
 
 def _schema_tooltips(widget_map):
     tables = []
@@ -64,12 +65,13 @@ def _schema_tooltips(widget_map):
             for opt in wid.options:
                 if opt[1] == wid.value:
                     value = opt[0]
-            tables.append((key,
-                           wid.description,
-                           '枚举型',
-                            value,
-                           f'{[o[0] for o in wid.options]}',
-                           wid.description_tooltip))
+            tables.append((
+                key,
+                wid.description,
+                '枚举型',
+                value,
+                f'{[o[0] for o in wid.options]}',
+                wid.description_tooltip))
     return tables
 
 
@@ -79,6 +81,7 @@ def _widget_add_child(widget, wdgs):
     for child in wdgs:
         widget.children = list(widget.children) + [child]
     return widget
+
 
 def observe_widget(method):
     def _widget(self, *args, **kwargs):
@@ -94,10 +97,10 @@ def observe_widget(method):
             if cb:
                 try:
                     cb(change)
-                except Exception as err:
-                    self._output('%s' % err)
+                except Exception:
+                    self.logger(traceback.format_exc(limit=6))
             self._output(change)
-        wdg.observe(lambda change, cb = cb: _on_value_change(change, cb), 'value')
+        wdg.observe(lambda change, cb=cb: _on_value_change(change, cb), 'value')
         return wdg.parent_box if hasattr(wdg, 'parent_box') else wdg
     return _widget
 
@@ -107,9 +110,9 @@ class BytesText(widgets.Text):
 
 
 class WidgetGenerator():
-    def __init__(self, lan = 'en', debug=False, events=None, border=False):
+    def __init__(self, lan='en', debug=False, events=None, border=False):
         self.page = widgets.Box()
-        self.out = widgets.Output(layout={'border': '1px solid black', 'width': '100%', 'height':'auto'})
+        self.out = widgets.Output(layout={'border': '1px solid black', 'width': '100%', 'height': 'auto'})
         self.output_type = 'none'
         self.lan = lan
         self.tag = 'tag'
@@ -119,65 +122,57 @@ class WidgetGenerator():
         self.events = events
         self.dataset_dir = ''
         self.dataset_url = ''
-        self.basic_types = ['int', 'float', 'bool',
-                'string', 'label', 'int-array', 'float-array',
-                'string-array', 'string-enum', 'image']
+        self.basic_types = [
+            'int', 'float', 'bool',
+            'string', 'label', 'int-array', 'float-array',
+            'string-array', 'string-enum', 'image']
 
         self.vlo = widgets.Layout(
-                width='auto',
-                align_items='stretch',
-                justify_content='flex-start',
-                margin='3px 0px 3px 0px',
-                )
+            width='auto',
+            align_items='stretch',
+            justify_content='flex-start',
+            margin='3px 0px 3px 0px')
         if self.border:
             self.vlo.border = 'solid 2px red'
 
         self.hlo = widgets.Layout(
-                width='100%',
-                flex_flow='row wrap',
-                align_items='stretch',
-                justify_content='flex-start',
-                margin='3px 0px 3px 0px',
-                )
+            width='100%',
+            flex_flow='row wrap',
+            align_items='stretch',
+            justify_content='flex-start',
+            margin='3px 0px 3px 0px')
         if self.border:
             self.hlo.border = 'solid 2px blue'
 
         self.page_layout = widgets.Layout(
-                display='flex',
-                width='100%',
-                )
+            display='flex',
+            width='100%')
         if self.border:
             self.page_layout.border = 'solid 2px black'
 
         self.tab_layout = widgets.Layout(
-                display='flex',
-                width='99%',
-                )
+            display='flex',
+            width='99%')
         if self.border:
             self.tab_layout.border = 'solid 2px yellow'
 
         self.accordion_layout = widgets.Layout(
-                display='flex',
-                width='99%',
-                )
+            display='flex',
+            width='99%')
         if self.border:
             self.accordion_layout.border = 'solid 2px green'
 
         self.nav_layout = widgets.Layout(
-                display='flex',
-                width='99%',
-                margin='3px 0px 3px 0px',
-                border='1px solid black',
-                )
+            display='flex',
+            width='99%',
+            margin='3px 0px 3px 0px',
+            border='1px solid black')
 
-        self.btn_layout = widgets.Layout(
-                margin='3px 0px 3px 0px',
-                )
+        self.btn_layout = widgets.Layout(margin='3px 0px 3px 0px')
 
         self.label_layout = widgets.Layout(
-                width="60px",
-                justify_content="center",
-                )
+            width="60px",
+            justify_content="center")
 
     def init_page(self):
         self.wid_widget_map = {}
@@ -231,7 +226,7 @@ class WidgetGenerator():
                         return
                     value = widget.value
                     if isinstance(value, bytes):
-                        value = value.decode("utf-8","ignore")
+                        value = value.decode("utf-8", "ignore")
                         if len(value) > 512:
                             return
                     if hasattr(widget, 'switch_value'):
@@ -281,11 +276,11 @@ class WidgetGenerator():
     def Debug(self, description, options, index=0):
         label = widgets.Label(value=description, layout=self.label_layout)
         wdg = widgets.ToggleButtons(
-                options=options,
-                index=index,
-                # description=description,
-                disabled=False,
-                button_style='warning')
+            options=options,
+            index=index,
+            # description=description,
+            disabled=False,
+            button_style='warning')
         wdg.parent_box = widgets.HBox(children=(label, wdg))
 
         def _value_change(change):
@@ -400,10 +395,10 @@ class WidgetGenerator():
     def BoolTrigger(self, wid, *args, **kwargs):
         wdg = widgets.Checkbox(*args, **kwargs)
         self._wid_map(wid, wdg)
-        parent_box = widgets.VBox(layout = self.vlo)
+        parent_box = widgets.VBox(layout=self.vlo)
         parent_box.trigger_box = {
-                'true': widgets.VBox(layout = self.vlo),
-                'false': widgets.VBox(layout = self.vlo)}
+            'true': widgets.VBox(layout=self.vlo),
+            'false': widgets.VBox(layout=self.vlo)}
         parent_box.layout.margin = '3px 0px 6px 0px'
         wdg.parent_box = parent_box
 
@@ -428,8 +423,8 @@ class WidgetGenerator():
     def StringEnumTrigger(self, wid, *args, **kwargs):
         wdg = widgets.Dropdown(*args, **kwargs)
         self._wid_map(wid, wdg)
-        parent_box = widgets.VBox(layout = self.vlo)
-        parent_box.trigger_box = {value: widgets.VBox(layout = self.vlo) for _, value in wdg.options}
+        parent_box = widgets.VBox(layout=self.vlo)
+        parent_box.trigger_box = {value: widgets.VBox(layout=self.vlo) for _, value in wdg.options}
         wdg.parent_box = parent_box
 
         def _update_layout(wdg, val, old):
@@ -483,7 +478,7 @@ class WidgetGenerator():
         tstyle = {}
         description_width = config.get('description_width', 130)
         if isinstance(description_width, str):
-            tstyle['description_width'] = description_width # 45% or 'initial'
+            tstyle['description_width'] = description_width  # 45% or 'initial'
         else:
             tstyle['description_width'] = '%dpx' % description_width
 
@@ -491,7 +486,8 @@ class WidgetGenerator():
         readonly = config.get('readonly', False)
         if readonly:
             args['disabled'] = True
-        if _type in ['bool', 'int', 'float', 'string', 'label', 'text', 'string-enum',
+        if _type in [
+                'bool', 'int', 'float', 'string', 'label', 'text', 'string-enum',
                 'bool-trigger', 'string-enum-trigger']:
             default = config.get('default', None)
             if default:
@@ -537,11 +533,11 @@ class WidgetGenerator():
             return _widget_add_child(widget, wdg)
 
         elif _type == 'tab':
-            wdg = widgets.Tab(layout = self.tab_layout)
+            wdg = widgets.Tab(layout=self.tab_layout)
             # wdg.titles = [obj['name'][self.lan] for obj in _objs]
             for i, obj in enumerate(_objs):
                 wdg.set_title(i, obj['name'] if isinstance(obj['name'], str) else obj['name'][self.lan])
-                box = widgets.VBox(layout = tlo)
+                box = widgets.VBox(layout=tlo)
                 for obj in obj['objs']:
                     self._parse_config(box, obj)
                 _widget_add_child(wdg, box)
@@ -549,11 +545,11 @@ class WidgetGenerator():
             return _widget_add_child(widget, wdg)
 
         elif _type == 'accordion':
-            wdg = widgets.Accordion(layout = self.accordion_layout)
+            wdg = widgets.Accordion(layout=self.accordion_layout)
             # wdg.titles = [obj['name'][self.lan] for obj in _objs]
             for i, obj in enumerate(_objs):
                 wdg.set_title(i, obj['name'] if isinstance(obj['name'], str) else obj['name'][self.lan])
-                box = widgets.VBox(layout = tlo)
+                box = widgets.VBox(layout=tlo)
                 for obj in obj['objs']:
                     self._parse_config(box, obj)
                 _widget_add_child(wdg, box)
@@ -569,15 +565,15 @@ class WidgetGenerator():
                 trigger_box = parent_box.boxes[val]
                 parent_box.children = [parent_box.children[0], trigger_box]
 
-            label = widgets.Label(value= _name[self.lan] if _name else ' ', layout=self.label_layout)
+            label = widgets.Label(value=_name[self.lan] if _name else ' ', layout=self.label_layout)
             btns = widgets.ToggleButtons()
-            wdg = widgets.VBox(layout = self.nav_layout)
+            wdg = widgets.VBox(layout=self.nav_layout)
             wdg.node_type = 'navigation'
             wdg.boxes = []
             options = []
             for i, obj in enumerate(_objs):
                 options.append((obj['name'] if isinstance(obj['name'], str) else obj['name'][self.lan], i))
-                box = widgets.VBox(layout = tlo)
+                box = widgets.VBox(layout=tlo)
                 self._parse_config(box, obj)
                 wdg.boxes.append(box)
             wdg.children = [widgets.HBox([label, btns]), wdg.boxes[0]]
@@ -586,7 +582,7 @@ class WidgetGenerator():
             btns.observe(_value_change, 'value')
             return _widget_add_child(widget, wdg)
 
-        elif _type == 'output': # debug info
+        elif _type == 'output':  # debug info
             options = []
             for obj in _objs:
                 options.append((obj['name'], obj['value']))
@@ -596,7 +592,7 @@ class WidgetGenerator():
 
         elif _type == 'object':
             if _name:
-                wdg = widgets.HTML(value = f"<b><font color='black'>{_name[self.lan]} :</b>")
+                wdg = widgets.HTML(value=f"<b><font color='black'>{_name[self.lan]} :</b>")
                 _widget_add_child(widget, wdg)
             for obj in _objs:
                 self._parse_config(widget, obj)
@@ -604,7 +600,7 @@ class WidgetGenerator():
 
         elif _type == 'H':
             if _name:
-                wdg = widgets.HTML(value = f"<b><font color='black'>{_name[self.lan]} :</b>")
+                wdg = widgets.HTML(value=f"<b><font color='black'>{_name[self.lan]} :</b>")
                 _widget_add_child(widget, wdg)
             # layout.display = 'flex'
             # layout.flex_flow = 'row'
@@ -615,7 +611,7 @@ class WidgetGenerator():
 
         elif _type == 'V':
             if _name:
-                wdg = widgets.HTML(value = f"<b><font color='black'>{_name[self.lan]} :</b>")
+                wdg = widgets.HTML(value=f"<b><font color='black'>{_name[self.lan]} :</b>")
                 _widget_add_child(widget, wdg)
             # layout.display = 'flex'
             # layout.flex_flow = 'column'
@@ -626,64 +622,59 @@ class WidgetGenerator():
 
         elif _type == 'bool':
             wdg = self.Bool(
-                    __id_,
-                    description = _name[self.lan],
-                    layout = tlo,
-                    style = tstyle,
-                    **args
-                    )
+                __id_,
+                description=_name[self.lan],
+                layout=tlo,
+                style=tstyle,
+                **args)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'int':
             wdg = self.Int(
                 __id_,
-                description = _name[self.lan],
-                layout = tlo,
-                style = tstyle,
+                description=_name[self.lan],
+                layout=tlo,
+                style=tstyle,
                 continuous_update=False,
-                **args,
-            )
+                **args)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'float':
             wdg = self.Float(
                 __id_,
-                description = _name[self.lan],
-                layout = tlo,
-                style = tstyle,
+                description=_name[self.lan],
+                layout=tlo,
+                style=tstyle,
                 continuous_update=False,
-                **args,
-            )
+                **args)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'string':
             wdg = self.String(
                 __id_,
-                description = _name[self.lan],
-                layout = tlo,
-                style = tstyle,
+                description=_name[self.lan],
+                layout=tlo,
+                style=tstyle,
                 continuous_update=False,
-                **args,
-            )
+                **args)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'label':
             wdg = self.Label(
                 __id_,
-                description = _name[self.lan],
-                layout = tlo,
-                style = tstyle,
+                description=_name[self.lan],
+                layout=tlo,
+                style=tstyle,
                 continuous_update=False,
-                **args,
-            )
+                **args)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'bytes':
             wdg = self.Bytes(
                 __id_,
-                description = _name[self.lan],
-                layout = tlo,
-                style = tstyle,
+                description=_name[self.lan],
+                layout=tlo,
+                style=tstyle,
                 continuous_update=False,
                 **args,
             )
@@ -692,9 +683,9 @@ class WidgetGenerator():
         elif _type == 'text':
             wdg = self.Text(
                 __id_,
-                description = _name[self.lan],
-                layout = tlo,
-                style = tstyle,
+                description=_name[self.lan],
+                layout=tlo,
+                style=tstyle,
                 continuous_update=False,
                 **args,
             )
@@ -702,15 +693,15 @@ class WidgetGenerator():
 
         elif _type == 'image':
             wdg = self.Image(
-                    __id_,
-                    layout = tlo,
-                    **args,)
+                __id_,
+                layout=tlo,
+                **args,)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'video':
             wdg = self.Video(
                     __id_,
-                    layout = tlo,
+                    layout=tlo,
                     **args,)
             return _widget_add_child(widget, wdg)
 
@@ -718,10 +709,10 @@ class WidgetGenerator():
             default = config.get('default', '[]')
             wdg = self.Array(
                 __id_,
-                description = _name[self.lan],
-                value = json.dumps(default),
-                layout = tlo,
-                style = tstyle,
+                description=_name[self.lan],
+                value=json.dumps(default),
+                layout=tlo,
+                style=tstyle,
                 continuous_update=False,
                 **args,
             )
@@ -733,10 +724,10 @@ class WidgetGenerator():
                 options.append((obj['name'] if isinstance(obj['name'], str) else obj['name'][self.lan], obj['value']))
             wdg = self.StringEnum(
                 __id_,
-                options = options,
-                description = _name[self.lan],
-                layout = tlo,
-                style = tstyle,
+                options=options,
+                description=_name[self.lan],
+                layout=tlo,
+                style=tstyle,
                 continuous_update=False,
                 **args,
             )
@@ -745,8 +736,8 @@ class WidgetGenerator():
         elif _type == 'bool-trigger':
             wdg = self.BoolTrigger(
                 __id_,
-                description = _name[self.lan],
-                layout = tlo,
+                description=_name[self.lan],
+                layout=tlo,
                 **args,
                 )
             for obj in _objs:
@@ -763,8 +754,8 @@ class WidgetGenerator():
                 __id_,
                 options=options,
                 description=_name[self.lan],
-                layout = tlo,
-                style = tstyle,
+                layout=tlo,
+                style=tstyle,
                 **args,
             )
             for obj in _objs:
@@ -775,11 +766,11 @@ class WidgetGenerator():
             style = config.get('style', 'success')
             icon = config.get('icon', '')
             wdg = widgets.Button(
-                    description=_name[self.lan],
-                    disabled=False,
-                    icon=icon,
-                    button_style=style,
-                    layout=tlo)
+                description=_name[self.lan],
+                disabled=False,
+                icon=icon,
+                button_style=style,
+                layout=tlo)
             self._wid_map(__id_, wdg)
             return _widget_add_child(widget, wdg)
 
@@ -787,22 +778,22 @@ class WidgetGenerator():
             style = config.get('style', 'success')
             icon = config.get('icon', '')
             wdg = widgets.ToggleButton(
-                    description=_name[self.lan],
-                    disabled=False,
-                    icon=icon,
-                    button_style=style,
-                    layout=tlo)
+                description=_name[self.lan],
+                disabled=False,
+                icon=icon,
+                button_style=style,
+                layout=tlo)
             self._wid_map(__id_, wdg)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'progressbar':
             style = config.get('style', 'success')
             wdg = widgets.FloatProgress(
-                    value=0.0,
-                    description=_name[self.lan],
-                    bar_style=style,
-                    layout=tlo,
-                    **args)
+                value=0.0,
+                description=_name[self.lan],
+                bar_style=style,
+                layout=tlo,
+                **args)
             self._wid_map(__id_, wdg)
             return _widget_add_child(widget, wdg)
 
@@ -814,20 +805,20 @@ class WidgetGenerator():
 
         elif _type == 'jslink':
             for obj in _objs:
-                source_id, source_trait =  obj['source']
-                target_id, target_trait =  obj['target']
+                source_id, source_trait = obj['source']
+                target_id, target_trait = obj['target']
                 widgets.jslink((self.get_widget_byid(source_id), source_trait), (self.get_widget_byid(target_id), target_trait))
 
         elif _type == 'jsdlink':
             for obj in _objs:
-                source_id, source_trait =  obj['source']
-                target_id, target_trait =  obj['target']
+                source_id, source_trait = obj['source']
+                target_id, target_trait = obj['target']
                 widgets.jsdlink((self.get_widget_byid(source_id), source_trait), (self.get_widget_byid(target_id), target_trait))
 
         elif _type == 'interactive':
             for obj in _objs:
                 handler = obj['handler']
-                params  = obj['params']
+                params  = obj['params']  # noqa
                 if isinstance(handler, str):
                     if handler in self.events:
                         handler = self.events[handler]
@@ -837,6 +828,11 @@ class WidgetGenerator():
                 widgets.interactive(lambda kwargs, H=handler:H(self, **kwargs), **params)
 
         elif _type == 'observe':
+            def _handle_execept(cb, change, targets):
+                try:
+                    cb(self, change['owner'], change['old'], change['new'], *targets)
+                except Exception:
+                    self.logger(traceback.format_exc(limit=6))
             for obj in _objs:
                 handler = obj['handler']
                 params  = obj['params']
@@ -852,8 +848,8 @@ class WidgetGenerator():
                 if 'targets' in params:
                     for wid in params['targets']:
                         target_wdgs.append(self.get_widget_byid(wid))
-                source_wdg.observe(lambda change, H=handler, T=target_wdgs: H(
-                    self, change['owner'], change['old'], change['new'], *T), 'value')
+                source_wdg.observe(lambda change, H=handler, targets=target_wdgs: _handle_execept(
+                    H, change, targets), 'value')
 
         elif _type == 'onclick':
             for obj in _objs:
@@ -944,8 +940,10 @@ def nbeasy_widget_type(id_, type_, label, default=None, tips=None, description_w
         easy['description_width'] = 0
     return easy
 
+
 def nbeasy_widget_bool(id_, label, default=False, tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'bool', label, default, tips, description_width, width, height, readonly)
+
 
 def nbeasy_widget_int(id_, label, default=0, min_=None, max_=None, description_width=None, tips=None, width=None, height=None, readonly=False):
     easy = nbeasy_widget_type(id_, 'int', label, default, tips, description_width, width, height, readonly)
@@ -955,6 +953,7 @@ def nbeasy_widget_int(id_, label, default=0, min_=None, max_=None, description_w
         easy['max'] = max_
     return easy
 
+
 def nbeasy_widget_float(id_, label, default=0.0, min_=None, max_=None, tips=None, description_width=None, width=None, height=None, readonly=False):
     easy = nbeasy_widget_type(id_, 'float', label, default, tips, description_width, width, height, readonly)
     if min_ is not None:
@@ -963,14 +962,18 @@ def nbeasy_widget_float(id_, label, default=0.0, min_=None, max_=None, tips=None
         easy['max'] = max_
     return easy
 
+
 def nbeasy_widget_string(id_, label, default='', tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'string', label, default, tips, description_width, width, height, readonly)
+
 
 def nbeasy_widget_label(id_, label, default='', tips=None, description_width=None, width=None, height=None, readonly=True):
     return nbeasy_widget_type(id_, 'label', label, default, tips, description_width, width, height, readonly)
 
+
 def nbeasy_widget_bytes(id_, label, default='', tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'bytes', label, default, tips, description_width, width, height, readonly)
+
 
 def nbeasy_widget_text(id_, label, default='', tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'text', label, default, tips, description_width, width, height, readonly)
@@ -978,32 +981,38 @@ def nbeasy_widget_text(id_, label, default='', tips=None, description_width=None
 def nbeasy_widget_intarray(id_, label, default=[], tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'int-array', label, default, tips, description_width, width, height, readonly)
 
+
 def nbeasy_widget_floatarray(id_, label, default=[], tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'float-array', label, default, tips, description_width, width, height, readonly)
 
+
 def nbeasy_widget_stringarray(id_, label, default=[], tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'string-array', label, default, tips, description_width, width, height, readonly)
+
 
 def nbeasy_widget_stringenum(id_, label, default=0, enums=[], tips=None, description_width=None, width=None, height=None, readonly=False):
     easy = nbeasy_widget_type(id_, 'string-enum', label, default, tips, description_width, width, height, readonly)
     if len(enums) == 0:
         enums = ['NONE']
     easy['objs'] = [{
-            'name': x if isinstance(x, str) else x[0],
-            'value': x if isinstance(x, str) else x[1]
-        } for x in enums]
+        'name': x if isinstance(x, str) else x[0],
+        'value': x if isinstance(x, str) else x[1]
+    } for x in enums]
     easy['default'] = enums[default] if isinstance(enums[default], str) else enums[default][1]
     return easy
+
 
 def nbeasy_widget_image(id_, label, default='', format='png', tips=None, description_width=None, width=None, height=None):
     easy = nbeasy_widget_type(id_, 'image', label, default, tips, description_width, width, height, readonly=False)
     easy['format'] = format
     return easy
 
+
 def nbeasy_widget_video(id_, label, default='', format='url', tips=None, description_width=None, width=None, height=None):
     easy = nbeasy_widget_type(id_, 'video', label, default, tips, description_width, width, height, readonly=False)
     easy['format'] = format
     return easy
+
 
 def nbeasy_widget_booltrigger(id_, label, default=False, triggers=[], tips=None, description_width=None, width=None, height=None, readonly=False):
     easy = nbeasy_widget_type(id_, 'bool-trigger', label, default, tips, description_width, width, height, readonly)
@@ -1022,31 +1031,35 @@ def nbeasy_widget_booltrigger(id_, label, default=False, triggers=[], tips=None,
     ]
     return easy
 
+
 def nbeasy_widget_stringenumtrigger(id_, label, default=0, enums=[], triggers=[], tips=None, description_width=None, width=None, height=None, readonly=False):
     easy = nbeasy_widget_type(id_, 'string-enum-trigger', label, default, tips, description_width, width, height, readonly)
     if len(enums) == 0:
         enums = ['NONE']
     easy['objs'] = [{
-            'name': x if isinstance(x, str) else x[0],
-            'value': x if isinstance(x, str) else x[1]
-        } for x in enums]
+        'name': x if isinstance(x, str) else x[0],
+        'value': x if isinstance(x, str) else x[1]
+    } for x in enums]
     easy['default'] = enums[default] if isinstance(enums[default], str) else enums[default][1]
     for i, trigger in enumerate(triggers):
         assert isinstance(trigger, dict), 'stringnum trigger must be dict type'
         easy['objs'][i]['trigger'] = trigger
     return easy
 
+
 def nbeasy_widget_button(id_, label, style='success', tips=None, description_width=None, width=None, height=None, icon=''):
     easy = nbeasy_widget_type(id_, 'button', label, tips, description_width, width, height)
-    easy['style'] = style # ['primary', 'success', 'info', 'warning', 'danger', '']
-    easy['icon'] = icon # https://fontawesome.com/icons
+    easy['style'] = style  # ['primary', 'success', 'info', 'warning', 'danger', '']
+    easy['icon'] = icon  # https://fontawesome.com/icons
     return easy
+
 
 def nbeasy_widget_togglebutton(id_, label, style='success', tips=None, description_width=None, width=None, height=None, icon=''):
     easy = nbeasy_widget_type(id_, 'togglebutton', label, tips, description_width, width, height)
-    easy['style'] = style # ['primary', 'success', 'info', 'warning', 'danger', '']
+    easy['style'] = style  # ['primary', 'success', 'info', 'warning', 'danger', '']
     easy['icon'] = icon
     return easy
+
 
 def nbeasy_widget_progressbar(id_, label, style='success', min_=0.0, max_=100.0, tips=None, description_width=None, width=None, height=None):
     easy = nbeasy_widget_type(id_, 'progressbar', label, None, tips, description_width, width, height, readonly=False)
@@ -1054,5 +1067,5 @@ def nbeasy_widget_progressbar(id_, label, style='success', min_=0.0, max_=100.0,
         easy['min'] = min_
     if max_ is not None:
         easy['max'] = max_
-    easy['style'] = style # ['success', 'info', 'warning', 'danger', '']
+    easy['style'] = style  # ['success', 'info', 'warning', 'danger', '']
     return easy
