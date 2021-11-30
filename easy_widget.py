@@ -92,7 +92,10 @@ def observe_widget(method):
             if hasattr(wdg, 'id'):
                 self.wid_value_map[wdg.id] = val
             if cb:
-                cb(change)
+                try:
+                    cb(change)
+                except Exception as err:
+                    self._output('%s' % err)
             self._output(change)
         wdg.observe(lambda change, cb = cb: _on_value_change(change, cb), 'value')
         return wdg.parent_box if hasattr(wdg, 'parent_box') else wdg
@@ -376,11 +379,11 @@ class WidgetGenerator():
     def Array(self, wid, *args, **kwargs):
         wdg = widgets.Text(*args, **kwargs)
         self._wid_map(wid, wdg)
-        wdg.switch_value = lambda val: json.loads(val)
+        wdg.switch_value = lambda val: json.loads(val if val[0] == '[' else '[' + val + ']')
 
         def _value_change(change):
             wdg = change['owner']
-            val = change['new']
+            val = change['new'].strip()
             self.wid_value_map[wdg.id] = wdg.switch_value(val)
         return wdg, _value_change
 
