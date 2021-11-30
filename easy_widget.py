@@ -516,6 +516,7 @@ class WidgetGenerator():
             if format:
                 args['format'] = format
         elif _type in ['H', 'V']:
+            # flex-start flex-end center space-between space-around space-evenly stretch inherit initial unset
             tlo.align_items = config.get('align_items', 'stretch')
             tlo.justify_content = config.get('justify_content', 'flex-start')
             tlo.align_content = config.get('align_content', 'flex-start')
