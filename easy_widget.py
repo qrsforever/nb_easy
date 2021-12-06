@@ -292,9 +292,10 @@ class WidgetGenerator():
         return wdg, _value_change
 
     def _wid_map(self, wid, widget):
-        widget.id = wid
-        widget.context = self
-        self.wid_widget_map[wid] = widget
+        if wid:
+            widget.id = wid
+            widget.context = self
+            self.wid_widget_map[wid] = widget
 
     def _rm_sub_wid(self, widget):
         if isinstance(widget, widgets.Box):
@@ -581,6 +582,7 @@ class WidgetGenerator():
             btns.options = options
             btns.parent_box = wdg
             btns.observe(_value_change, 'value')
+            self._wid_map(__id_, btns)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'output':  # debug info
