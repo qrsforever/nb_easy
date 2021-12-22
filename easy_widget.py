@@ -544,6 +544,7 @@ class WidgetGenerator():
                     self._parse_config(box, obj)
                 _widget_add_child(wdg, box)
             wdg.selected_index = 0
+            self._wid_map(__id_, wdg)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'accordion':
@@ -556,6 +557,7 @@ class WidgetGenerator():
                     self._parse_config(box, obj)
                 _widget_add_child(wdg, box)
             # wdg.selected_index = 0
+            self._wid_map(__id_, wdg)
             return _widget_add_child(widget, wdg)
 
         elif _type == 'navigation':
@@ -795,6 +797,7 @@ class WidgetGenerator():
                 value=0.0,
                 description=_name[self.lan],
                 bar_style=style,
+                style=tstyle,
                 layout=tlo,
                 **args)
             self._wid_map(__id_, wdg)
@@ -837,8 +840,7 @@ class WidgetGenerator():
                 except Exception:
                     self.logger(traceback.format_exc(limit=6))
             for obj in _objs:
-                handler = obj['handler']
-                params  = obj['params']
+                handler, params = obj['handler'], obj['params']
                 if isinstance(handler, str):
                     if handler in self.events:
                         handler = self.events[handler]
@@ -851,13 +853,15 @@ class WidgetGenerator():
                 if 'targets' in params:
                     for wid in params['targets']:
                         target_wdgs.append(self.get_widget_byid(wid))
+                val = 'value' 
+                if isinstance(source_wdg, (widgets.Tab, widgets.Accordion)):
+                    val = 'selected_index'
                 source_wdg.observe(lambda change, H=handler, targets=target_wdgs: _handle_execept(
-                    H, change, targets), 'value')
+                    H, change, targets), val)
 
         elif _type == 'onclick':
             for obj in _objs:
-                handler = obj['handler']
-                params  = obj['params']
+                handler, params = obj['handler'], obj['params']
                 if isinstance(handler, str):
                     if handler in self.events:
                         handler = self.events[handler]
