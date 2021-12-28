@@ -237,8 +237,10 @@ class WidgetGenerator():
         _get_kv(self.page)
         return kv_map
 
-    def get_all_json(self):
-        config = ConfigFactory.from_dict(self.get_all_kv())
+    def get_all_json(self, kvs=None):
+        if not kvs:
+            kvs = self.get_all_kv()
+        config = ConfigFactory.from_dict(kvs)
         return json.loads(HOCONConverter.convert(config, 'json'))
 
     def logger(self, msg, clear=0):
@@ -375,7 +377,7 @@ class WidgetGenerator():
     def Array(self, wid, *args, **kwargs):
         wdg = widgets.Text(*args, **kwargs)
         self._wid_map(wid, wdg)
-        wdg.switch_value = lambda val: json.loads(val if val[0] == '[' else '[' + val + ']')
+        wdg.switch_value = lambda val: json.loads(val if (val and val[0] == '[') else '[' + val + ']')
 
         def _value_change(change):
             wdg = change['owner']
@@ -846,18 +848,25 @@ class WidgetGenerator():
                         handler = self.events[handler]
                 if not callable(handler):
                     continue
-                source_wdg = self.get_widget_byid(params['source'])
                 target_wdgs = []
                 if 'target' in params:
                     target_wdgs.append(self.get_widget_byid(params['target']))
                 if 'targets' in params:
                     for wid in params['targets']:
                         target_wdgs.append(self.get_widget_byid(wid))
-                val = 'value' 
-                if isinstance(source_wdg, (widgets.Tab, widgets.Accordion)):
-                    val = 'selected_index'
-                source_wdg.observe(lambda change, H=handler, targets=target_wdgs: _handle_execept(
-                    H, change, targets), val)
+
+                if 'sources' in params:
+                    sources = params['sources']
+                else:
+                    sources = [params['source']]
+
+                for source in sources:
+                    source_wdg = self.get_widget_byid(source)
+                    val = 'value' 
+                    if isinstance(source_wdg, (widgets.Tab, widgets.Accordion)):
+                        val = 'selected_index'
+                    source_wdg.observe(lambda change, H=handler, targets=target_wdgs: _handle_execept(
+                        H, change, targets), val)
 
         elif _type == 'onclick':
             for obj in _objs:
@@ -867,9 +876,15 @@ class WidgetGenerator():
                         handler = self.events[handler]
                 if not callable(handler):
                     continue
-                source_wdg = self.get_widget_byid(params['source'])
                 targets = [self.get_widget_byid(x) for x in params['targets']]
-                source_wdg.on_click(lambda btn, H=handler, args=targets: H(self, btn, *args))
+                if 'sources' in params:
+                    sources = params['sources']
+                else:
+                    sources = [params['source']]
+
+                for source in sources:
+                    source_wdg = self.get_widget_byid(source)
+                    source_wdg.on_click(lambda btn, H=handler, args=targets: H(self, btn, *args))
 
         else:
             for obj in _objs:
