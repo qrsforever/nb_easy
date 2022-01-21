@@ -209,6 +209,15 @@ class WidgetGenerator():
         kv_map = {}
 
         def _get_kv(widget):
+            if hasattr(widget, 'node_type') and widget.node_type == 'multiselect':
+                if hasattr(widget, 'id') and hasattr(widget, 'multi_options'):
+                    if widget.id[0] == '_' and widget.id[1] == '_':
+                        return
+                    if remove_underline and widget.id[0] == '_':
+                        return
+                    kv_map[widget.id] = widget.get_value()
+                return
+
             if isinstance(widget, widgets.Box):
                 if hasattr(widget, 'node_type') and widget.node_type == 'navigation':
                     for child in widget.boxes:
@@ -222,6 +231,7 @@ class WidgetGenerator():
                         return
                     if remove_underline and widget.id[0] == '_':
                         return
+
                     value = widget.value
                     if isinstance(value, bytes):
                         value = value.decode("utf-8", "ignore")
@@ -390,6 +400,18 @@ class WidgetGenerator():
 
         def _value_change(change):
             pass
+        return wdg, _value_change
+
+    @observe_widget
+    def SimpleMultiSelect(self, wid, *args, **kwargs):
+        wdg = widgets.SelectMultiple(*args, **kwargs)
+        wdg.switch_value = lambda val: list(val)
+        self._wid_map(wid, wdg)
+
+        def _value_change(change):
+            wdg = change['owner']
+            val = change['new']
+            self.wid_value_map[wdg.id] = wdg.switch_value(val)
         return wdg, _value_change
 
     @observe_widget
@@ -766,8 +788,73 @@ class WidgetGenerator():
                 self._parse_config(wdg.trigger_box[obj['value']], obj['trigger'])
             return _widget_add_child(widget, wdg)
 
+        elif _type == 'multiselect_simple':
+            options = []
+            for obj in _objs:
+                options.append((obj['name'] if isinstance(obj['name'], str) else obj['name'][self.lan], obj['value']))
+            wdg = self.SimpleMultiSelect(__id_,
+                options=options,
+                description=_name[self.lan],
+                layout=tlo,
+                style=tstyle,
+                continuous_update=False,
+                **args,
+            )
+            return _widget_add_child(widget, wdg)
+
         elif _type == 'multiselect':
-            pass
+            options = []
+            for obj in _objs:
+                options.append((obj['name'] if isinstance(obj['name'], str) else obj['name'][self.lan], obj['value']))
+            label_widget = widgets.Label(_name[self.lan], layout=widgets.Layout(width=tstyle['description_width']))
+
+            search_widget = widgets.Text(continuous_update=True,
+                    layout=widgets.Layout(width=tlo.width), placeholder='Search')
+            v_layout = widgets.Layout(
+                overflow='auto',
+                border='1px solid black',
+                width=tlo.width,
+                height=tlo.height,
+                flex_flow='column',
+                display='flex'
+            )
+            h_layout = widgets.Layout(
+                width='auto',
+                height=tlo.height,
+            )
+            # description_width
+            options_dict = {description[0]: widgets.Checkbox(
+                description=description[0], value=False,
+                layout=widgets.Layout(width='90%'),
+                style={'description_width':'10px'}) for description in options}
+
+            for key, val in options:
+                options_dict[key]._value = val
+
+            options_widget = widgets.VBox(list(options_dict.values()), layout=v_layout)
+
+            multi_select_widget = widgets.HBox([label_widget, widgets.VBox([search_widget, options_widget])], layout=h_layout)
+            multi_select_widget.node_type = 'multiselect'
+            multi_select_widget.multi_options = options_widget
+            multi_select_widget.get_value = lambda widget = multi_select_widget: [w._value for w in widget.multi_options.children if w.value]
+
+            def on_text_change(change):
+                options_widget = change['owner'].options_widget
+                options_dict = change['owner'].options_dict
+                search_input = change['new']
+                if search_input == '':
+                    new_options = list(options_dict.values())
+                else:
+                    close_matches = [x for x in list(options_dict.keys()) if str.lower(search_input.strip('')) in str.lower(x)]
+                    new_options = [options_dict[description] for description in close_matches]
+                options_widget.children = new_options
+
+            search_widget.options_widget = options_widget
+            search_widget.options_dict = options_dict
+            search_widget.observe(on_text_change, names='value')
+
+            self._wid_map(__id_, multi_select_widget)
+            return _widget_add_child(widget, multi_select_widget)
 
         elif _type == 'button':
             style = config.get('style', 'success')
@@ -862,7 +949,7 @@ class WidgetGenerator():
 
                 for source in sources:
                     source_wdg = self.get_widget_byid(source)
-                    val = 'value' 
+                    val = 'value'
                     if isinstance(source_wdg, (widgets.Tab, widgets.Accordion)):
                         val = 'selected_index'
                     source_wdg.observe(lambda change, H=handler, targets=target_wdgs: _handle_execept(
@@ -1093,13 +1180,14 @@ def nbeasy_widget_progressbar(id_, label, style='success', min_=0.0, max_=100.0,
     easy['style'] = style  # ['success', 'info', 'warning', 'danger', '']
     return easy
 
-def nbeasy_widget_multiselect(id_, label, default=0, enums=[], tips=None, description_width=None, width=None, height=None, readonly=False):
-    easy = nbeasy_widget_type(id_, 'multiselect', label, default, tips, description_width, width, height, readonly)
-    if len(enums) == 0:
-        enums = ['NONE']
-    easy['objs'] = [{
-        'name': x if isinstance(x, str) else x[0],
-        'value': x if isinstance(x, str) else x[1]
-    } for x in enums]
-    easy['default'] = enums[default] if isinstance(enums[default], str) else enums[default][1]
+
+def nbeasy_widget_multiselect(id_, label, default=0, enums=[], tips=None, description_width=None, width=100, height=100, readonly=False):
+    easy = nbeasy_widget_stringenum(id_, label, default, enums, tips, description_width, width, height, readonly)
+    easy['type'] = 'multiselect'
+    return easy
+
+
+def nbeasy_widget_multiselect_simple(id_, label, default=0, enums=[], tips=None, description_width=None, width=100, height=100, readonly=False):
+    easy = nbeasy_widget_stringenum(id_, label, default, enums, tips, description_width, width, height, readonly)
+    easy['type'] = 'multiselect_simple'
     return easy
