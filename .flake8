@@ -19,7 +19,7 @@ ignore =
 #   E305
     E401  # multiple imports on one line
     E402  # imports not at top of file
-#   E501  # line to long
+    E501  # line to long
     W503  # line break before binary operator
     W291
     W293

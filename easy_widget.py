@@ -12,8 +12,6 @@ from IPython.display import display, clear_output
 from traitlets.utils.bunch import Bunch
 import traitlets
 import ipywidgets as widgets
-import base64
-import os
 import json
 import pprint
 import traceback
@@ -464,7 +462,7 @@ class WidgetGenerator():
             _name = {'en': _name, 'cn': _name}
 
         tlo = widgets.Layout()
-        flex = config.get('flex', '0 1 auto')
+        # flex = config.get('flex', '0 1 auto')
         width = config.get('width', None)
         height = config.get('height', None)
         if width:
@@ -745,8 +743,7 @@ class WidgetGenerator():
                 __id_,
                 description=_name[self.lan],
                 layout=tlo,
-                **args,
-                )
+                **args)
             for obj in _objs:
                 trigger_obj = obj['trigger']
                 trigger_box = wdg.trigger_box['true' if obj['value'] else 'false']
@@ -768,6 +765,9 @@ class WidgetGenerator():
             for obj in _objs:
                 self._parse_config(wdg.trigger_box[obj['value']], obj['trigger'])
             return _widget_add_child(widget, wdg)
+
+        elif _type == 'multiselect':
+            pass
 
         elif _type == 'button':
             style = config.get('style', 'success')
@@ -1000,6 +1000,7 @@ def nbeasy_widget_bytes(id_, label, default='', tips=None, description_width=Non
 def nbeasy_widget_text(id_, label, default='', tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'text', label, default, tips, description_width, width, height, readonly)
 
+
 def nbeasy_widget_intarray(id_, label, default=[], tips=None, description_width=None, width=None, height=None, readonly=False):
     return nbeasy_widget_type(id_, 'int-array', label, default, tips, description_width, width, height, readonly)
 
@@ -1090,4 +1091,15 @@ def nbeasy_widget_progressbar(id_, label, style='success', min_=0.0, max_=100.0,
     if max_ is not None:
         easy['max'] = max_
     easy['style'] = style  # ['success', 'info', 'warning', 'danger', '']
+    return easy
+
+def nbeasy_widget_multiselect(id_, label, default=0, enums=[], tips=None, description_width=None, width=None, height=None, readonly=False):
+    easy = nbeasy_widget_type(id_, 'multiselect', label, default, tips, description_width, width, height, readonly)
+    if len(enums) == 0:
+        enums = ['NONE']
+    easy['objs'] = [{
+        'name': x if isinstance(x, str) else x[0],
+        'value': x if isinstance(x, str) else x[1]
+    } for x in enums]
+    easy['default'] = enums[default] if isinstance(enums[default], str) else enums[default][1]
     return easy
