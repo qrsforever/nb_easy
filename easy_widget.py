@@ -806,7 +806,8 @@ class WidgetGenerator():
             options = []
             for obj in _objs:
                 options.append((obj['name'] if isinstance(obj['name'], str) else obj['name'][self.lan], obj['value']))
-            label_widget = widgets.Label(_name[self.lan], layout=widgets.Layout(width=tstyle['description_width']))
+            label_widget = widgets.Label(_name[self.lan], layout=widgets.Layout(
+                width=tstyle['description_width'], display="flex", justify_content='flex-end'))
 
             search_widget = widgets.Text(continuous_update=True,
                     layout=widgets.Layout(width=tlo.width), placeholder='Search')
