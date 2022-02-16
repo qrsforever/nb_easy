@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Value, Array, Pipe, Lock
 from enum import Enum
-import inspect
 from abc import ABC, abstractmethod
+import numpy as np
+import inspect
+import sys # noqa
 
 
 class State(Enum):
@@ -132,3 +134,134 @@ class TaskPipeline(object):
 # pipe.add(output_func)
 # pipe.add(ResultTest('test'))
 # pipe.run(5)
+
+
+class ShmNumpy(object):
+    def __init__(self, dtype, shape):
+        self.shm_size = int(np.prod(shape))
+        self.mp_array = Array(dtype, self.shm_size, lock=Lock())
+        self.np_array = np.frombuffer(self.mp_array.get_obj(), dtype=dtype)
+        self.dsize, self.ddim = Value('I', self.shm_size), Value('I', 3)
+        self.dshape = Array('I', shape)
+
+    @property
+    def data(self):
+        return self.np_array[:self.dsize.value].reshape(self.dshape[:self.ddim.value])
+
+    @data.setter
+    def data(self, d):
+        assert self.shm_size >= d.size
+        self.np_array[:d.size] = d.ravel()
+        self.ddim.value = len(d.shape)
+        self.dshape[:len(d.shape)] = d.shape
+        self.dsize.value = d.size
+
+    @property
+    def shape(self):
+        return self.dshape.value
+
+    def lock(self):
+        self.mp_array.acquire()
+
+    def unlock(self):
+        self.mp_array.release()
+
+
+class TaskV2(object):
+    def __init__(self, id, func, input_pipe, output_pipe, inshms=[], outshms=[]):
+        self.id = id
+        self.fn = func
+        self.input_pipe, self.output_pipe = input_pipe, output_pipe
+        self.inshms, self.outshms = inshms, outshms
+
+    def inshms(self):
+        return self.inshms
+
+    def outshms(self):
+        return self.outshms
+
+    def start(self):
+        self.process = Process(target=self.main_loop, args=(self.input_pipe, self.output_pipe))
+        self.process.start()
+
+    def main_loop(self, input_pipe, output_pipe):
+        try:
+            if hasattr(self.fn, "init"):
+                self.fn.init()
+
+            while True:
+                x = self.input_pipe.recv()
+                # sys.stderr.write(f'<{x}>\n')
+                if x == State.STOP:
+                    self.output_pipe.send(State.STOP)
+                    break
+
+                result = self.fn(x, *self.inshms, *self.outshms)
+                if inspect.isgenerator(result):
+                    for x in result:
+                        self.output_pipe.send(x)
+                else:
+                    self.output_pipe.send(result)
+
+            if hasattr(self.fn, "shutdown"):
+                self.fn.shutdown()
+
+        except KeyboardInterrupt:
+            pass
+        except Exception:
+            print("For {}".format(self.fn))
+            raise
+
+
+class TaskPipelineV2(object):
+    def __init__(self):
+        self.tasks = []
+        self.nextId = 1
+        self.input_pipe, self.output_pipe = Pipe()
+
+    def run(self, x=None):
+        for task in self.tasks:
+            task.start()
+        self.input_pipe.send(x)
+        while True:
+            x = self.output_pipe.recv()
+            if x == State.STOP:
+                break
+
+    def add(self, fn, shms=[]):
+        input_pipe, output_pipe = Pipe()
+
+        inshms, outshms = [], shms
+        if len(self.tasks) > 0:
+            inshms = self.tasks[-1].outshms
+
+        self.tasks.append(TaskV2(self.nextId, fn, self.output_pipe, input_pipe, inshms, outshms))
+        self.nextId += 1
+        self.output_pipe = output_pipe
+
+# def input_func(x, shm_frame):
+#     for i in range(x):
+#         shm_frame.lock()
+#         shm_frame.data = np.ones(shm_frame.shape) * i
+#         y = {'a': i}
+#         yield  y
+#     yield State.STOP
+#
+# def output_func(x, shm_frame):
+#     y = x['a'] * 2
+#     sys.stderr.write(f'{shm_frame.data[0, 0, :]}')
+#     shm_frame.unlock()
+#     yield y
+#
+# class ResultTest(ICallable):
+#     def __init__(self, arg):
+#         self.arg = arg
+#
+#     def __call__(self, x):
+#         sys.stderr.write(f'result: {x}\n')
+#
+# pipe = TaskPipelineV2()
+# pipe.add(input_func, shms=[ShmNumpy('I', (640, 352, 3))])
+# pipe.add(output_func)
+# pipe.add(ResultTest('test'))
+# pipe.run(10)
