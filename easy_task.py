@@ -55,6 +55,8 @@ class Task(object):
                 if x == State.SHUTDOWN:
                     break
                 if x == State.SHUTDOWN_LAST:
+                    if hasattr(self.fn, "shutdown"):
+                        self.fn.shutdown()
                     self.output_queue.put(State.STOP)
                     break
                 if x == State.STOP:
@@ -75,9 +77,6 @@ class Task(object):
                         self.input_queue.put(State.STOP)
                     else:
                         self.output_queue.put(result)
-
-            if hasattr(self.fn, "shutdown"):
-                self.fn.shutdown()
 
         except KeyboardInterrupt:
             pass
@@ -191,8 +190,9 @@ class TaskV2(object):
 
             while True:
                 x = self.input_pipe.recv()
-                # sys.stderr.write(f'<{x}>\n')
                 if x == State.STOP:
+                    if hasattr(self.fn, "shutdown"):
+                        self.fn.shutdown()
                     self.output_pipe.send(State.STOP)
                     break
 
@@ -202,9 +202,6 @@ class TaskV2(object):
                         self.output_pipe.send(x)
                 else:
                     self.output_pipe.send(result)
-
-            if hasattr(self.fn, "shutdown"):
-                self.fn.shutdown()
 
         except KeyboardInterrupt:
             pass
