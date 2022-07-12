@@ -967,25 +967,25 @@ class WidgetGenerator():
                         handler = self.events[handler]
                 if not callable(handler):
                     continue
-                # targets = [self.get_widget_byid(x) for x in params['targets']]
+                targets = [x for x in params['targets']]
                 if 'sources' in params:
                     sources = params['sources']
                 else:
                     sources = [params['source']]
 
-                def _H(ctx, btn, targets):
+                def _H(H, btn, tgs):
                     args = []
-                    for x in targets:
+                    for x in tgs:
                         v = x.split(':')
-                        w = ctx.get_widget_byid(v[0])
+                        w = self.get_widget_byid(v[0])
                         if len(v) > 1 and hasattr(w, v[1]):
                             w = getattr(w, v[1])
                         args.append(w)
-                    return handler(self, btn, *args)
+                    return H(self, btn, *args)
 
                 for source in sources:
                     source_wdg = self.get_widget_byid(source)
-                    source_wdg.on_click(lambda btn, H=_H, targets=params['targets']: H(self, btn, targets))
+                    source_wdg.on_click(lambda btn, H=handler, T=targets: _H(H, btn, T))
 
         else:
             for obj in _objs:
