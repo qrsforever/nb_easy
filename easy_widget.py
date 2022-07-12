@@ -1201,7 +1201,7 @@ def nbeasy_widget_multiselect(id_, label, default=0, enums=[], tips=None, descri
     return easy
 
 
-def nbeasy_widget_multiselect_simple(id_, label, default=0, enums=[], tips=None, description_width=None, width=100, height=100, readonly=False):
+def nbeasy_widget_multiselect_simple(id_, label, default=0, enums=[], tips=None, description_width=None, width=None, height=None, readonly=False):
     easy = nbeasy_widget_stringenum(id_, label, default, enums, tips, description_width, width, height, readonly)
     easy['type'] = 'multiselect_simple'
     return easy
