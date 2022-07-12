@@ -719,6 +719,9 @@ class WidgetGenerator():
             return _widget_add_child(widget, wdg)
 
         elif _type == 'image':
+            # default = config.get('default', '')
+            # if default == '':
+            #     img_width, img_height = args['width'], args['height']
             wdg = self.Image(
                 __id_,
                 layout=tlo,
@@ -964,15 +967,25 @@ class WidgetGenerator():
                         handler = self.events[handler]
                 if not callable(handler):
                     continue
-                targets = [self.get_widget_byid(x) for x in params['targets']]
+                # targets = [self.get_widget_byid(x) for x in params['targets']]
                 if 'sources' in params:
                     sources = params['sources']
                 else:
                     sources = [params['source']]
 
+                def _H(ctx, btn, targets):
+                    args = []
+                    for x in targets:
+                        v = x.split(':')
+                        w = ctx.get_widget_byid(v[0])
+                        if len(v) > 1 and hasattr(w, v[1]):
+                            w = getattr(w, v[1])
+                        args.append(w)
+                    return handler(self, btn, *args)
+
                 for source in sources:
                     source_wdg = self.get_widget_byid(source)
-                    source_wdg.on_click(lambda btn, H=handler, args=targets: H(self, btn, *args))
+                    source_wdg.on_click(lambda btn, H=_H, targets=params['targets']: H(self, btn, targets))
 
         else:
             for obj in _objs:
@@ -1113,7 +1126,7 @@ def nbeasy_widget_stringenum(id_, label, default=0, enums=[], tips=None, descrip
     return easy
 
 
-def nbeasy_widget_image(id_, label, default='', format='png', tips=None, description_width=None, width=None, height=None):
+def nbeasy_widget_image(id_, label, default='', format='png', tips=None, description_width=None, width=300, height=300):
     easy = nbeasy_widget_type(id_, 'image', label, default, tips, description_width, width, height, readonly=False)
     easy['format'] = format
     return easy
