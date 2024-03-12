@@ -128,7 +128,7 @@ def nbeasy_imread(imgin):
             else:
                 raise
         img = cv2.imdecode(np.frombuffer(imgin, dtype=np.uint8), cv2.IMREAD_COLOR)
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     else:
         img = cv2.imread(imgin)
     return img
