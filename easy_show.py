@@ -184,7 +184,7 @@ def nbeasy_imgrid(images, nrow=None, padding=4, pad_value=127, labels=None,
     else:
         shape_length = np.asarray([len(img.shape) for img in images]).max()
     lack = count % nrow
-    rows = np.int0(np.ceil(count / nrow))
+    rows = np.intp(np.ceil(count / nrow))
     hpad_size = [max_h, padding]
     if rows > 1:
         vpad_size = [padding, nrow * max_w + (nrow - 1) * padding]
