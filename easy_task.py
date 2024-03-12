@@ -6,9 +6,7 @@ from enum import Enum
 from abc import ABC, abstractmethod
 import numpy as np
 import inspect
-# import multiprocessing
-
-# multiprocessing.set_start_method('forkserver', force=True)
+import sys # noqa
 
 
 class State(Enum):
@@ -57,8 +55,6 @@ class Task(object):
                 if x == State.SHUTDOWN:
                     break
                 if x == State.SHUTDOWN_LAST:
-                    if hasattr(self.fn, "shutdown"):
-                        self.fn.shutdown()
                     self.output_queue.put(State.STOP)
                     break
                 if x == State.STOP:
@@ -79,6 +75,9 @@ class Task(object):
                         self.input_queue.put(State.STOP)
                     else:
                         self.output_queue.put(result)
+
+            if hasattr(self.fn, "shutdown"):
+                self.fn.shutdown()
 
         except KeyboardInterrupt:
             pass
@@ -192,27 +191,20 @@ class TaskV2(object):
 
             while True:
                 x = self.input_pipe.recv()
+                # sys.stderr.write(f'<{x}>\n')
                 if x == State.STOP:
+                    self.output_pipe.send(State.STOP)
                     break
 
                 result = self.fn(x, *self.inshms, *self.outshms)
                 if inspect.isgenerator(result):
-                    quit = False
                     for x in result:
-                        if x == State.STOP:
-                            quit = True
-                            break
                         self.output_pipe.send(x)
-                    if quit:
-                        break
                 else:
-                    if result == State.STOP:
-                        break
                     self.output_pipe.send(result)
 
             if hasattr(self.fn, "shutdown"):
                 self.fn.shutdown()
-            self.output_pipe.send(State.STOP)
 
         except KeyboardInterrupt:
             pass

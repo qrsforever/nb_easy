@@ -115,4 +115,4 @@ def nbeasy_vstack(imglist, sep=10, color=255):
     for img in imglist[1:]:
         ilist.append(imgsep)
         ilist.append(img)
-    return np.hstack(ilist)
+    return np.vstack(ilist)

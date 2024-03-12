@@ -15,28 +15,9 @@ import traceback
 import queue
 
 
-class SingletonType(type):
-    _instance_lock = threading.Lock()
-
-    def __call__(cls, *args, **kwargs):
-        if not hasattr(cls, "_instance"):
-            with SingletonType._instance_lock:
-                if not hasattr(cls, "_instance"):
-                    cls._instance = super(SingletonType,cls).__call__(*args, **kwargs)
-        return cls._instance
-
-# https://www.cnblogs.com/huchong/p/8244279.html
-# class Foo(metaclass=SingletonType):
-#     def __init__(self,name):
-#         self.name = name
-# obj1 = Foo('name')
-# obj2 = Foo('name')
-# print(obj1,obj2)
-
-
-class MultiProcessingLogHandler(logging.Handler, metaclass=SingletonType):
+class MultiProcessingHandler(logging.Handler):
     def __init__(self, name, handlers=None):
-        super(MultiProcessingLogHandler, self).__init__()
+        super(MultiProcessingHandler, self).__init__()
         if handlers is None or len(handlers) == 0:
             handlers = [logging.StreamHandler()]
         self.handlers = handlers
@@ -47,12 +28,12 @@ class MultiProcessingLogHandler(logging.Handler, metaclass=SingletonType):
         self._receive_thread.start()
 
     def setLevel(self, level):
-        super(MultiProcessingLogHandler, self).setLevel(level)
+        super(MultiProcessingHandler, self).setLevel(level)
         for handler in self.handlers:
             handler.setLevel(level)
 
     def setFormatter(self, fmt):
-        super(MultiProcessingLogHandler, self).setFormatter(fmt)
+        super(MultiProcessingHandler, self).setFormatter(fmt)
         for handler in self.handlers:
             handler.setFormatter(fmt)
 
@@ -104,7 +85,7 @@ class MultiProcessingLogHandler(logging.Handler, metaclass=SingletonType):
             self._receive_thread.join(5.0)
             for handler in self.handlers:
                 handler.close()
-            super(MultiProcessingLogHandler, self).close()
+            super(MultiProcessingHandler, self).close()
 
 
 def nbeasy_get_logger(name, level=logging.DEBUG, filepath=None, backup_count=-1, console=True, mp=False):
@@ -137,13 +118,10 @@ def nbeasy_get_logger(name, level=logging.DEBUG, filepath=None, backup_count=-1,
         handlers.append(filelog)
 
     if mp: # multiprocessing
-        handlers = [MultiProcessingLogHandler(name, handlers)]
+        handlers = [MultiProcessingHandler(name, handlers)]
 
     for handler in handlers:
         handler.setLevel(level)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     return logger
-
-
-# logger = nbeasy_get_logger('default')
