@@ -116,3 +116,119 @@ def nbeasy_vstack(imglist, sep=10, color=255):
         ilist.append(imgsep)
         ilist.append(img)
     return np.vstack(ilist)
+
+
+def nbeasy_imread(imgin):
+    is_bytes = isinstance(imgin, bytes)
+    if is_bytes or imgin.startswith('http'):
+        if not is_bytes:
+            response = requests.get(imgin)
+            if response:
+                imgin = response.content
+            else:
+                raise
+        img = cv2.imdecode(np.frombuffer(imgin, dtype=np.uint8), cv2.IMREAD_COLOR)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    else:
+        img = cv2.imread(imgin)
+    return img
+
+
+def nbeasy_imshow(image, title=None, color='bgr', figsize=(6, 3), canvas=False):
+    import IPython
+    plt.close('all')
+    if figsize == 'auto':
+        ih, iw = image.shape[:2]
+        fw, fh = int(1.5 * iw / 80) + 1, int(1.5 * ih / 80) + 1
+        if fw > 32:
+            fh = int(32 * (fh / fw))
+            fw = 32
+        figsize = (fw, fh)
+    if canvas:
+        IPython.get_ipython().enable_matplotlib(gui='widget');
+        fig = plt.figure(figsize=figsize)
+        fig.canvas.toolbar_position = 'left'
+        fig.canvas.toolbar_visible = True
+        fig.canvas.header_visible = False
+        fig.canvas.footer_visible = True
+    else:
+        IPython.get_ipython().enable_matplotlib(gui='inline')
+        fig = plt.figure(figsize=figsize)
+    plt.axis('off')
+    if title is not None:
+        plt.title(title)
+    if color == 'gray' or len(image.shape) == 2:
+        plt.imshow(image, cmap='gray');
+    else:
+        if color == 'bgr':
+           image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        plt.imshow(image);
+
+
+def nbeasy_imgrid(images, nrow=None, padding=4, pad_value=127, labels=None,
+                     font_scale=1.0, font_thickness=1, text_color=(255,), text_color_bg=None):
+    count = len(images)
+    if isinstance(images, dict):
+        labels = [lab for lab in images.keys()]
+        images = [img for img in images.values()]
+
+    if not isinstance(images, (list, tuple, np.ndarray)) or count == 0 or not isinstance(images[0], np.ndarray):
+        return
+    if nrow is None or nrow > count:
+        nrow = count
+
+    max_h, max_w = np.asarray([img.shape[:2] for img in images]).max(axis=0)
+    if labels is not None:
+        text_org = int(0.1 * max_w), int(0.9 * max_h)
+        shape_length = 3
+    else:
+        shape_length = np.asarray([len(img.shape) for img in images]).max()
+    lack = count % nrow
+    rows = np.int0(np.ceil(count / nrow))
+    hpad_size = [max_h, padding]
+    if rows > 1:
+        vpad_size = [padding, nrow * max_w + (nrow - 1) * padding]
+        if lack > 0:
+            lack_size = [max_h, max_w]
+    if shape_length == 3:
+        hpad_size.append(3)
+        if rows > 1:
+            vpad_size.append(3)
+            if lack > 0:
+                lack_size.append(3)
+    hpadding = pad_value * np.ones(hpad_size, dtype=np.uint8)
+    if rows > 1:
+        vpadding = pad_value * np.ones(vpad_size, dtype=np.uint8)
+        if lack > 0:
+            lack_image = pad_value * np.ones(lack_size, dtype=np.uint8)
+            images.extend([lack_image] * lack)
+            if labels is not None:
+                labels.extend([''] * lack)
+    vlist = []
+    for i in range(rows):
+        hlist = []
+        for j in range(nrow):
+            if j != 0:
+                hlist.append(hpadding)
+            timg = images[i * nrow + j].copy()
+            th, tw = timg.shape[:2]
+            if th != max_h or tw != max_w:
+                timg = cv2.resize(timg, (max_w, max_h))
+            if len(timg.shape) != shape_length:
+                timg = cv2.cvtColor(timg, cv2.COLOR_GRAY2BGR)
+            if labels is not None:
+                text = str(labels[i * nrow + j])
+                if len(text) > 0:
+                    if text_color_bg is not None:
+                        (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
+                        pos1 = text_org[0] - int(font_scale * 5), text_org[1] - th - int(font_scale * 5)
+                        pos2 = text_org[0] + int(font_scale * 5) + tw, text_org[1] + int(font_scale * 8)
+                        cv2.rectangle(timg, pos1, pos2, text_color_bg, -1)
+                    cv2.putText(timg, text, text_org, cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thickness)
+            hlist.append(timg)
+        if i != 0:
+            vlist.append(vpadding)
+        vlist.append(np.hstack(hlist))
+    if rows > 1:
+        return np.vstack(vlist)
+    return vlist[0]
