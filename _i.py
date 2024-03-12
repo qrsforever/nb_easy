@@ -1,4 +1,5 @@
 import os
+import sys
 import response
 
 def _IMPORT(x, tag='main', debug=False):
@@ -27,7 +28,7 @@ def _IMPORT(x, tag='main', debug=False):
             elif x.startswith('github.com'):
                 x = x.replace('github.com', 'raw.githubusercontent.com')
                 mod = x.split('/')
-                x = 'https://' + '/'.join(mod[:3]) + f'/{tag}/' + '/'.join(mod[-3:])
+                x = 'https://' + '/'.join(mod[:3]) + f'/{tag}/' + '/'.join(mod[3:])
                 x = __request_text(x)
             elif x.startswith('gitee.com'):
                 mod = x.split('/')
@@ -38,8 +39,7 @@ def _IMPORT(x, tag='main', debug=False):
         else:
             exec(x, globals())
     except Exception as err:
-        # sys.stderr.write(f'request {x} : {err}')
-       pass
+        sys.stderr.write(f'request {x} : {err}')
 
 def _DIR(x, dumps=True, ret=True):
     attrs = sorted([y for y in dir(x) if not y.startswith('_')])
