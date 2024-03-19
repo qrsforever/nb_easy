@@ -118,7 +118,7 @@ def nbeasy_vstack(imglist, sep=10, color=255):
     return np.vstack(ilist)
 
 
-def nbeasy_imread(imgin):
+def nbeasy_imread(imgin, rgb=True, size=None):
     is_bytes = isinstance(imgin, bytes)
     if is_bytes or imgin.startswith('http'):
         if not is_bytes:
@@ -128,9 +128,16 @@ def nbeasy_imread(imgin):
             else:
                 raise
         img = cv2.imdecode(np.frombuffer(imgin, dtype=np.uint8), cv2.IMREAD_COLOR)
-        # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        if not rgb:
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     else:
         img = cv2.imread(imgin)
+        if rgb:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    if size:
+        if isinstance(size, int):
+            size = (size, size)
+        img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
     return img
 
 
