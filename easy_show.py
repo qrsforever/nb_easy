@@ -118,7 +118,7 @@ def nbeasy_vstack(imglist, sep=10, color=255):
     return np.vstack(ilist)
 
 
-def nbeasy_imread(imgin, rgb=True, size=None):
+def nbeasy_imread(imgin, color='rgb', size=None):
     is_bytes = isinstance(imgin, bytes)
     if is_bytes or imgin.startswith('http'):
         if not is_bytes:
@@ -128,12 +128,16 @@ def nbeasy_imread(imgin, rgb=True, size=None):
             else:
                 raise
         img = cv2.imdecode(np.frombuffer(imgin, dtype=np.uint8), cv2.IMREAD_COLOR)
-        if not rgb:
+        if color != 'rgb':
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        elif color == 'gray':
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     else:
         img = cv2.imread(imgin)
-        if rgb:
+        if color == 'rgb':
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        elif color == 'gray':
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     if size:
         if isinstance(size, int):
             size = (size, size)
@@ -141,7 +145,7 @@ def nbeasy_imread(imgin, rgb=True, size=None):
     return img
 
 
-def nbeasy_imshow(image, title=None, color='bgr', figsize=(6, 3), canvas=False):
+def nbeasy_imshow(image, title=None, color='rgb', figsize=(6, 3), canvas=False):
     import IPython
     plt.close('all')
     if figsize == 'auto':
