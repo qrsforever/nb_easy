@@ -172,12 +172,13 @@ def nbeasy_imshow(image, title=None, color='rgb', figsize=(6, 3), canvas=False):
         plt.imshow(image, cmap='gray');
     else:
         if color == 'bgr':
-           image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         plt.imshow(image);
 
 
-def nbeasy_imgrid(images, nrow=None, padding=4, pad_value=127, labels=None,
-                     font_scale=1.0, font_thickness=1, text_color=(255,), text_color_bg=None):
+def nbeasy_imgrid(
+        images, nrow=None, padding=4, pad_value=127, labels=None,
+        font_scale=1.0, font_thickness=1, text_color=(255,), text_color_bg=None):
     count = len(images)
     if isinstance(images, dict):
         labels = [lab for lab in images.keys()]

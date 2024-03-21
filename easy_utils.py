@@ -13,6 +13,7 @@ import sys
 import threading
 import traceback
 import queue
+import random, json, random
 
 
 class MultiProcessingHandler(logging.Handler):
@@ -125,3 +126,45 @@ def nbeasy_get_logger(name, level=logging.DEBUG, filepath=None, backup_count=-1,
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     return logger
+
+
+def nbeasy_open_port(port, height=600):
+    from IPython import display
+    from html import escape as html_escape
+    frame_id = 'erlangai-frame-{:08x}'.format(random.getrandbits(64))
+    body = '''
+      <iframe id='%HTML_ID%' width='100%' height='%HEIGHT%' frameborder='0'>
+      </iframe>
+      <script>
+        (function() {
+          const frame = document.getElementById(%JSON_ID%);
+          const url = new URL(%URL%, window.location);
+          const port = %PORT%;
+          if (port) {
+            url.port = port;
+          }
+          frame.src = url;
+        })();
+      </script>
+    '''
+    replacements = [
+        ('%HTML_ID%', html_escape(frame_id, quote=True)),
+        ('%JSON_ID%', json.dumps(frame_id)),
+        ('%HEIGHT%', '%d' % height),
+        ('%PORT%', '%d' % port),
+        ('%URL%', json.dumps('/')),
+    ]
+    for (k, v) in replacements:
+        body = body.replace(k, v)
+    display.display(display.HTML(body))
+
+
+def nbeasy_setrng_seed(x=888):
+    import numpy as np
+    import torch
+    try:
+        random.seed(x)
+        np.random.seed(x)
+        torch.manual_seed(x)
+    except Exception: 
+        pass
