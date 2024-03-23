@@ -24,20 +24,23 @@ def _get_notebook_filepath():
     connection_file = get_connection_file()
     with open(connection_file, 'r') as f:
         jdata = json.load(f)
-    return jdata['jupyter_session']
+    if 'jupyter_session' in jdata:
+        return jdata['jupyter_session']
+    return ''
 
 @register_line_magic
 def generate_toc(notebook_path):
     if len(notebook_path) == 0:
         notebook_path = _get_notebook_filepath()
-    indent_char="&emsp;"
+    if not os.path.exists(notebook_path):
+        return
+    with open(notebook_path, 'r') as in_f:
+        nb_json = json.load(in_f)
 
     def is_markdown(it):
         return "markdown" == it["cell_type"]
 
-    with open(notebook_path, 'r') as in_f:
-        nb_json = json.load(in_f)
-
+    indent_char="&emsp;"
     is_first_title, level_adj = True, 0
     toc_numbers, toc_str = [], []
     for cell in filter(is_markdown, nb_json["cells"]):
@@ -133,7 +136,7 @@ def start_netron(line):
 @register_cell_magic
 def format_writefile(line, cell):
     path = os.path.dirname(line)
-    if not os.path.exists(path):
+    if len(path) > 0 and not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
     with open(line, 'w') as fw:
         fw.write(cell.format(**globals()))
