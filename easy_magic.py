@@ -7,6 +7,7 @@
 # @date 2024-03-23 14:27
 
 import os
+import sys
 import json
 import random
 import urllib
@@ -14,6 +15,51 @@ import urllib
 from IPython.core.magic import register_line_magic
 from IPython.core.magic import register_cell_magic
 
+def _pip_install(package):
+    import subprocess
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", package])
+
+#################################################################################
+### init_notebook
+#################################################################################
+# {{{
+@register_line_magic
+def init_notebook(line):
+    icon_local, icon_colab, icon_kaggle = '', '', ''
+    cwd = os.getcwd()
+    if cwd.startswith('/content'):  # google colab
+        icon_colab = '✔'
+        platform_type = 1
+    elif cwd.startswith('/kaggle'):
+        icon_kaggle = '✔'
+        platform_type = 2
+    else:
+        icon_local = '✔'
+        platform_type = 0
+
+    globals()['PLATFORM_LOCAL'] = 0
+    globals()['PLATFORM_COLAB'] = 1
+    globals()['PLATFORM_KAGGLE'] = 2
+    globals()['PLATFORM_TYPE'] = platform_type
+
+    from IPython import display
+    mdstr = '''
+|Platform Type|Value|Global Variable|Environment|
+|:-----------:|:---:|:--------------|:---------:|
+|Local|0|PLATFORM_LOCAL|{icon_local}|
+|Colab|1|PLATFORM_COLAB|{icon_colab}|
+|Kaggle|2|PLATFORM_KAGGLE|{icon_kaggle}|
+    '''
+    mdstr = mdstr.format(
+        icon_local=icon_local,
+        icon_colab=icon_colab,
+        icon_kaggle=icon_kaggle
+    )
+    print('PLATFORM_TYPE = %d\n' % platform_type)
+    if platform_type != 0:
+        _pip_install('watermark')
+    display.display(display.Markdown(mdstr))
+# }}}
 
 #################################################################################
 ### generate_toc
@@ -135,6 +181,9 @@ def start_netron(line):
 # {{{
 @register_cell_magic
 def format_writefile(line, cell):
+    '''
+    if write json file， don't forget '{' '}' --> '{{' '}}'
+    '''
     path = os.path.dirname(line)
     if len(path) > 0 and not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
