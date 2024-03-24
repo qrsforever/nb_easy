@@ -145,6 +145,22 @@ def nbeasy_imread(imgin, color='rgb', size=None):
     return img
 
 
+def nbeasy_imsave(path, image, figsize=(6, 3)):
+    import IPython
+    plt.close('all')
+    if figsize == 'auto':
+        ih, iw = image.shape[:2]
+        fw, fh = int(1.5 * iw / 80) + 1, int(1.5 * ih / 80) + 1
+        if fw > 32:
+            fh = int(32 * (fh / fw))
+            fw = 32
+        figsize = (fw, fh)
+    IPython.get_ipython().enable_matplotlib(gui='inline')
+    plt.figure(figsize=figsize)
+    plt.axis('off')
+    plt.imsave(path, image);
+
+
 def nbeasy_imshow(image, title=None, color='rgb', figsize=(6, 3), canvas=False):
     import IPython
     plt.close('all')
